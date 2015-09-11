@@ -6,6 +6,19 @@ JuGDS: Julia Interface to CoreArray Genomic Data Structure (GDS) Files
 
 [![Build Status](https://travis-ci.org/CoreArray/JuGDS.jl.png)](https://travis-ci.org/CoreArray/JuGDS.jl)
 
+Not completed yet!
+
+
+## Installation
+
+* Development version from Github:
+```julia
+Pkg.status()
+Pkg.clone("https://github.com/zhengxwen/gdsfmt.git")
+Pkg.build("JuGDS")
+```
+
+
 
 ## Copyright Notice
 

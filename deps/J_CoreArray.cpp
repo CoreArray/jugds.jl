@@ -6,7 +6,7 @@
 // _/_/_/   _/_/_/  _/_/_/_/_/     _/     _/_/_/   _/_/
 // ===========================================================
 //
-// J_CoreArray.cpp: Export the C routines of CoreArray allowing C++ exceptions
+// J_CoreArray.cpp: Export the C routines of CoreArray
 //
 // Copyright (C) 2015    Xiuwen Zheng
 //
@@ -30,7 +30,7 @@
  *	\author   Xiuwen Zheng [zhengx@u.washington.edu]
  *	\version  1.0
  *	\date     2015
- *	\brief    Export the C routines of CoreArray allowing C++ exceptions
+ *	\brief    Export the C routines of CoreArray
  *	\details
 **/
 
@@ -192,6 +192,20 @@ COREARRAY_DLL_EXPORT const char *GDS_Error()
 
 
 // ===========================================================================
+// Initialization
+
+/// Initialize
+COREARRAY_DLL_EXPORT void GDS_Init()
+{
+	CORE_TRY
+		// to register CoreArray classes and objects
+		RegisterClass();
+	CORE_CATCH
+}
+
+
+
+// ===========================================================================
 // Functions for GDS File
 
 COREARRAY_INLINE static PdGDSFile GetGDSFile(int gds_id)
@@ -212,12 +226,8 @@ COREARRAY_DLL_EXPORT int GDS_File_Create(const char *FileName)
 {
 	int gds_id = -1;
 	CORE_TRY
-		// to register CoreArray classes and objects
-		RegisterClass();
-
 		int i = GetEmptyFileIndex();
 		PdGDSFile file = NULL;
-
 		try {
 			file = new CdGDSFile;
 			file->SaveAsFile(FileName);
@@ -246,12 +256,8 @@ COREARRAY_DLL_EXPORT int GDS_File_Open(const char *FileName, C_BOOL ReadOnly)
 {
 	int gds_id = -1;
 	CORE_TRY
-		// to register CoreArray classes and objects
-		RegisterClass();
-
 		int id = GetEmptyFileIndex();
 		PdGDSFile file = NULL;
-
 		try {
 			file = new CdGDSFile;
 			file->LoadFileFork(FileName, ReadOnly!=0);
@@ -337,10 +343,12 @@ COREARRAY_DLL_EXPORT void GDS_File_Close(int gds_id)
 }
 
 
-///
-COREARRAY_DLL_EXPORT void GDS_File_Sync(PdGDSFile File)
+/// Synchronize the GDS file
+COREARRAY_DLL_EXPORT void GDS_File_Sync(int gds_id)
 {
-	File->SyncFile();
+	CORE_TRY
+		GetGDSFile(gds_id)->SyncFile();
+	CORE_CATCH
 }
 
 
@@ -468,8 +476,7 @@ COREARRAY_DLL_EXPORT void GDS_Node_ListName(int node_id, PdGDSObj node,
 					}
 				}
 			}
-		} else
-			throw ErrJuGDS(ERR_NOT_FOLDER);
+		}
 	CORE_CATCH
 }
 
