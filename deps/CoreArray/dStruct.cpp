@@ -98,6 +98,11 @@ void *CdIterator::ReadData(void *OutBuf, ssize_t n, C_SVType OutSV)
     return Handler->IterRData(*this, OutBuf, n, OutSV);
 }
 
+void *CdIterator::ReadDataEx(void *OutBuf, ssize_t n, C_SVType OutSV, const C_BOOL Selection[])
+{
+    return Handler->IterRDataEx(*this, OutBuf, n, OutSV, Selection);
+}
+
 const void *CdIterator::WriteData(const void *InBuf, ssize_t n, C_SVType InSV)
 {
     return Handler->IterWData(*this, InBuf, n, InSV);
@@ -220,6 +225,68 @@ void *CdContainer::IterRData(CdIterator &I, void *OutBuf, ssize_t n,
 			{
 				UTF16String *p = (UTF16String*)OutBuf;
 				for (; n > 0; n--, ++I) *p++ = I.GetString();
+				return p;
+			}
+		default:
+			throw ErrContainer("Invalid SVType.");
+	}
+
+	return OutBuf;
+
+	#undef ITER_READ_INT
+	#undef ITER_READ_FLOAT
+}
+
+void *CdContainer::IterRDataEx(CdIterator &I, void *OutBuf, ssize_t n,
+	C_SVType OutSV, const C_BOOL Selection[])
+{
+	#define ITER_READ_INT(TYPE) { \
+			TYPE *p = (TYPE*)OutBuf; \
+			for (; n > 0; n--, ++I) \
+				if (*Selection++) *p++ = I.GetInteger(); \
+			return p; \
+		}
+	#define ITER_READ_FLOAT(TYPE) { \
+			TYPE *p = (TYPE*)OutBuf; \
+			for (; n > 0; n--, ++I) \
+				if (*Selection++) *p++ = I.GetFloat(); \
+			return p; \
+		}
+
+	switch (OutSV)
+	{
+		case svInt8:
+			ITER_READ_INT(C_Int8);
+		case svUInt8:
+			ITER_READ_INT(C_UInt8);
+		case svInt16:
+			ITER_READ_INT(C_Int16);
+		case svUInt16:
+			ITER_READ_INT(C_UInt16);
+		case svInt32:
+			ITER_READ_INT(C_Int32);
+		case svUInt32:
+			ITER_READ_INT(C_UInt32);
+		case svInt64:
+			ITER_READ_INT(C_Int64);
+		case svUInt64:
+			ITER_READ_INT(C_UInt64);
+		case svFloat32:
+			ITER_READ_FLOAT(C_Float32);
+		case svFloat64:
+			ITER_READ_FLOAT(C_Float64);
+		case svStrUTF8:
+			{
+				UTF8String *p = (UTF8String*)OutBuf;
+				for (; n > 0; n--, ++I)
+					if (*Selection++) *p++ = UTF16ToUTF8(I.GetString());
+				return p;
+			}
+		case svStrUTF16:
+			{
+				UTF16String *p = (UTF16String*)OutBuf;
+				for (; n > 0; n--, ++I)
+					if (*Selection++) *p++ = I.GetString();
 				return p;
 			}
 		default:
@@ -413,7 +480,7 @@ void CdAbstractArray::Assign(CdGDSObj &Source, bool Full)
 		}
 		C_Int64 Count = Array.TotalCount();
 		CdIterator I = Array.IterBegin();
-		this->Append(I, Count);
+		this->AppendIter(I, Count);
 		CloseWriter();
 	} else
 		RaiseInvalidAssign(dName(), &Source);
@@ -604,7 +671,7 @@ void CdAbstractArray::WriteData(const C_Int32 *Start, const C_Int32 *Length,
 	}
 }
 
-void CdAbstractArray::Append(CdIterator &I, C_Int64 Count)
+void CdAbstractArray::AppendIter(CdIterator &I, C_Int64 Count)
 {
 	#define ITER_APPEND(TYPE, SV) \
 		{ \
@@ -814,7 +881,7 @@ CdAllocArray::CdAllocArray(ssize_t vElmSize): CdAbstractArray()
 {
 	fElmSize = vElmSize;
 	if (vElmSize <= 0)
-    	throw ErrArray(ERR_ELM_SIZE, "CdAllocArray::CdAllocArray", vElmSize);
+		throw ErrArray(ERR_ELM_SIZE, "CdAllocArray::CdAllocArray", vElmSize);
 
 	fDimension.resize(1);
 	fDimension[0].DimElmSize = fElmSize;

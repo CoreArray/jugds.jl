@@ -34,9 +34,11 @@
  *	\details
 **/
 
-#include "CoreArray/CoreArray.h"
-#include <string>
-#include <vector>
+#include <CoreArray.h>
+
+#define COREARRAY_JUGDS_PACKAGE
+#include "J_GDS.h"
+
 
 namespace JuGDS
 {
@@ -141,8 +143,16 @@ using namespace CoreArray;
 using namespace JuGDS;
 
 
+
+// ===========================================================================
+// ===========================================================================
+// Functions with try and catch, usually called by JuGDS.jl
+// ===========================================================================
+// ===========================================================================
+
 extern "C"
 {
+
 /// the flag of error
 COREARRAY_DLL_LOCAL bool has_error;
 /// the error message
@@ -167,12 +177,19 @@ COREARRAY_DLL_LOCAL string error_info;
 	}
 
 
-/// 
+/// text interactive functions
 #define TEXT_PUSH  \
 	void (*push_text)(void *julia, const char *txt, size_t txt_len)
 
 #define TEXT_SET   \
 	void (*set_text)(void *julia, ssize_t index, const char *txt, size_t txt_len)
+
+/// integer interactive functions
+#define INT64_PUSH  \
+	void (*push_int64)(void *julia, C_Int64 val)
+
+
+
 
 
 // ===========================================================================
@@ -508,5 +525,260 @@ COREARRAY_DLL_EXPORT int GDS_Node_Index(int node_id, PdGDSObj node,
 	CORE_CATCH
 	return id;
 }
+
+
+/// Get the folder node which contains the specified node
+COREARRAY_DLL_EXPORT int GDS_GetFolder(int node_id, PdGDSObj node,
+	PdGDSObj *PObj)
+{
+	int id = -1;
+	CORE_TRY
+		CheckGDSObj(node_id, node, true);
+		*PObj = node = node->Folder();
+		if (node)
+			id = StoreGDSObj(node);
+	CORE_CATCH
+	return id;
+}
+
+
+/// Get the description of a GDS node
+COREARRAY_DLL_EXPORT int GDS_NodeObjDesp(int node_id, PdGDSObj node,
+	double *CompressionRatio, C_Int64 *Size,
+	TEXT_PUSH, void *txt, INT64_PUSH, void *intarray)
+{
+	int flag = 0;
+	CORE_TRY
+
+		CheckGDSObj(node_id, node, true);
+		UTF8String s;
+
+		#define PUSH_STRING(str)  \
+			{ s = UTF8Text(str); (*push_text)(txt, &s[0], s.size()); }
+		#define PUSH_INT(i)  \
+			(*push_int64)(intarray, i);
+
+		// 1: name
+		PUSH_STRING(node->Name());
+		// 2: full name
+		PUSH_STRING(node->FullName());
+		// 3: storage, the stream name of data field, such like "dInt32"
+		PUSH_STRING(node->dName());
+
+		// 4: trait, the description of data field, such like "Int32"
+		s = UTF8Text(node->dTraitName());
+		if (dynamic_cast<CdGDSVirtualFolder*>(node))
+			s = UTF8Text(((CdGDSVirtualFolder*)node)->LinkFileName());
+		PUSH_STRING(s);
+
+		// 5: type (a factor)
+		static const char *FactorText[] = {
+			"Label", "Folder", "VFolder", "Raw", "Integer", "Factor",
+			"Logical", "Real", "String", "Unknown" };
+		int TypeInt = 10; // unknown
+		if (dynamic_cast<CdGDSLabel*>(node))
+			TypeInt = 1;
+		else if (dynamic_cast<CdGDSFolder*>(node))
+			TypeInt = 2;
+		else if (dynamic_cast<CdGDSVirtualFolder*>(node))
+			TypeInt = 3;
+		else if (dynamic_cast<CdGDSStreamContainer*>(node))
+			TypeInt = 4;
+		else if (dynamic_cast<CdContainer*>(node))
+		{
+			CdContainer* nn = static_cast<CdContainer*>(node);
+			C_SVType sv = nn->SVType();
+			if (COREARRAY_SV_INTEGER(sv))
+			{
+				if (GDS_R_Is_Factor(node))
+					TypeInt = 6;
+				else if (GDS_R_Is_Logical(node))
+					TypeInt = 7;
+				else
+					TypeInt = 5;
+			} else if (COREARRAY_SV_FLOAT(sv))
+				TypeInt = 8;
+			else if (COREARRAY_SV_STRING(sv))
+				TypeInt = 9;
+		}
+		PUSH_STRING(FactorText[TypeInt - 1]);
+
+		// 6: is.array
+		flag = dynamic_cast<CdAbstractArray*>(node) ? 0x01 : 0x00;
+
+		// 7: dim, the dimension of data field
+		// 8: encoder, the compression method: "", "ZIP"
+		// 9: compress, the compression method: "", "ZIP.max"
+		// 10: CompressionRatio, data compression ratio, "NaN" indicates no compression
+		string encoder, coder;
+		*CompressionRatio = NaN;
+		if (dynamic_cast<CdAbstractArray*>(node))
+		{
+			CdAbstractArray *_Obj = (CdAbstractArray*)node;
+
+			for (int i=_Obj->DimCnt()-1; i >=0; i--)
+				PUSH_INT(_Obj->GetDLen(i));
+
+			if (_Obj->PipeInfo())
+			{
+				encoder = _Obj->PipeInfo()->Coder();
+				coder   = _Obj->PipeInfo()->CoderParam();
+				if (_Obj->PipeInfo()->StreamTotalIn() > 0)
+				{
+					*CompressionRatio =
+						(double)_Obj->PipeInfo()->StreamTotalOut() /
+						_Obj->PipeInfo()->StreamTotalIn();
+				}
+			}
+		} else if (dynamic_cast<CdGDSStreamContainer*>(node))
+		{
+			CdGDSStreamContainer *_Obj = (CdGDSStreamContainer*)node;
+			if (_Obj->PipeInfo())
+			{
+				encoder = _Obj->PipeInfo()->Coder();
+				coder   = _Obj->PipeInfo()->CoderParam();
+				if (_Obj->PipeInfo()->StreamTotalIn() > 0)
+				{
+					*CompressionRatio =
+						(double)_Obj->PipeInfo()->StreamTotalOut() /
+						_Obj->PipeInfo()->StreamTotalIn();
+				}
+				PUSH_INT(_Obj->PipeInfo()->StreamTotalIn());
+			} else
+				PUSH_INT(_Obj->GetSize());
+		}
+		PUSH_STRING(encoder);
+		PUSH_STRING(coder);
+
+		// 11: size
+		*Size = -1;
+		if (dynamic_cast<CdContainer*>(node))
+		{
+			CdContainer *p = static_cast<CdContainer*>(node);
+			p->Synchronize();
+			*Size = p->GDSStreamSize();
+		} else if (dynamic_cast<CdGDSStreamContainer*>(node))
+		{
+			CdGDSStreamContainer *_Obj = (CdGDSStreamContainer*)node;
+			if (_Obj->PipeInfo())
+				*Size = _Obj->PipeInfo()->StreamTotalIn();
+			else
+				*Size = _Obj->GetSize();
+		}
+
+		// 12: good
+		if (dynamic_cast<CdGDSVirtualFolder*>(node))
+		{
+			CdGDSVirtualFolder *v = (CdGDSVirtualFolder*)node;
+			flag |= (v->IsLoaded(true) ? 0x02 : 0x00);
+		} else if (!dynamic_cast<CdGDSUnknown*>(node))
+		{
+			flag |= 0x02;
+		}
+
+		// 13: message
+		if (dynamic_cast<CdGDSVirtualFolder*>(node))
+		{
+			CdGDSVirtualFolder *v = (CdGDSVirtualFolder*)node;
+			v->IsLoaded(true);
+			PUSH_STRING(v->ErrMsg());
+		} else
+			PUSH_STRING("");
+
+/*			// 14: param
+			tmp = R_NilValue;
+			if (dynamic_cast<CdPackedReal8*>(Obj) ||
+				dynamic_cast<CdPackedReal16*>(Obj) ||
+				dynamic_cast<CdPackedReal32*>(Obj))
+			{
+				PROTECT(tmp = NEW_LIST(2));
+				SEXP nm = PROTECT(NEW_STRING(2));
+				nProtected += 2;
+				SET_STRING_ELT(nm, 0, mkChar("offset"));
+				SET_STRING_ELT(nm, 1, mkChar("scale"));
+				SET_NAMES(tmp, nm);
+
+				if (dynamic_cast<CdPackedReal8*>(Obj))
+				{
+					CdPackedReal8 *v = static_cast<CdPackedReal8*>(Obj);
+					SET_ELEMENT(tmp, 0, ScalarReal(v->Offset()));
+					SET_ELEMENT(tmp, 1, ScalarReal(v->Scale()));
+				} else if (dynamic_cast<CdPackedReal16*>(Obj))
+				{
+					CdPackedReal16 *v = static_cast<CdPackedReal16*>(Obj);
+					SET_ELEMENT(tmp, 0, ScalarReal(v->Offset()));
+					SET_ELEMENT(tmp, 1, ScalarReal(v->Scale()));
+				} else {
+					CdPackedReal32 *v = static_cast<CdPackedReal32*>(Obj);
+					SET_ELEMENT(tmp, 0, ScalarReal(v->Offset()));
+					SET_ELEMENT(tmp, 1, ScalarReal(v->Scale()));
+				}
+			} else if (dynamic_cast<CdFStr8*>(Obj) ||
+				dynamic_cast<CdFStr16*>(Obj) ||
+				dynamic_cast<CdFStr32*>(Obj))
+			{
+				PROTECT(tmp = NEW_LIST(1));
+				SEXP nm = PROTECT(NEW_STRING(1));
+				nProtected += 2;
+				SET_STRING_ELT(nm, 0, mkChar("maxlen"));
+				SET_NAMES(tmp, nm);
+
+				if (dynamic_cast<CdFStr8*>(Obj))
+				{
+					SET_ELEMENT(tmp, 0, ScalarInteger(
+						dynamic_cast<CdFStr8*>(Obj)->MaxLength()));
+				} else if (dynamic_cast<CdFStr16*>(Obj))
+				{
+					SET_ELEMENT(tmp, 0, ScalarInteger(
+						dynamic_cast<CdFStr16*>(Obj)->MaxLength()));
+				} else {
+					SET_ELEMENT(tmp, 0, ScalarInteger(
+						dynamic_cast<CdFStr32*>(Obj)->MaxLength()));
+				}
+			}
+			SET_ELEMENT(rv_ans, 13, tmp);
+*/
+
+		#undef PUSH_STRING
+		#undef PUSH_INT
+
+	CORE_CATCH
+	return flag;
+}
+
+
+
+
+
+
+
+// ===========================================================================
+// ===========================================================================
+// Functions without try and catch
+// ===========================================================================
+// ===========================================================================
+
+extern "C"
+{
+/// return true, if Obj is a logical object in R
+COREARRAY_DLL_EXPORT C_BOOL GDS_R_Is_Logical(PdGDSObj Obj)
+{
+	return Obj->Attribute().HasName(ASC16("R.logical"));
+}
+
+/// return true, if Obj is a factor variable
+COREARRAY_DLL_EXPORT C_BOOL GDS_R_Is_Factor(PdGDSObj Obj)
+{
+	if (Obj->Attribute().HasName(ASC16("R.class")) &&
+		Obj->Attribute().HasName(ASC16("R.levels")))
+	{
+		return (RawText(Obj->Attribute()[ASC16("R.class")].GetStr8())
+			== "factor");
+	} else
+		return false;
+}
+
+}
+
 
 } // extern "C"

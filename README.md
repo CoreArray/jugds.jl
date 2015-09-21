@@ -14,9 +14,15 @@ Not completed yet!
 * Development version from Github:
 ```julia
 Pkg.status()
-Pkg.clone("https://github.com/zhengxwen/gdsfmt.git")
+Pkg.clone("https://github.com/CoreArray/JuGDS.jl.git")
 Pkg.build("JuGDS")
 ```
+
+
+
+## Tutorials
+
+* Learn Julia in Y minutes: [http://learnxinyminutes.com/docs/julia/](http://learnxinyminutes.com/docs/julia/)
 
 
 

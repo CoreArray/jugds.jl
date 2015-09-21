@@ -95,7 +95,7 @@ clean:
 ##  Julia Interface  ##
 
 J_CoreArray.o: J_CoreArray.cpp
-	$(CXX) $(CXXFLAGS) J_CoreArray.cpp -c -o $@
+	$(CXX) $(CXXFLAGS) -ICoreArray J_CoreArray.cpp -c -o $@
 
 ##  CoreArray Library  ##
 
