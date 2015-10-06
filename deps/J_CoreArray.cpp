@@ -369,6 +369,17 @@ COREARRAY_DLL_EXPORT void GDS_File_Sync(int gds_id)
 }
 
 
+/// Get the file size and check the file handler
+COREARRAY_DLL_EXPORT C_Int64 GDS_FileSize(int gds_id)
+{
+	C_Int64 rv;
+	CORE_TRY
+		rv = GetGDSFile(gds_id)->GetFileSize();
+	CORE_CATCH
+	return rv;
+}
+
+
 
 // ===========================================================================
 // Functions for File Structure

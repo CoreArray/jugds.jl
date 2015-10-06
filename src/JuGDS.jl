@@ -21,7 +21,7 @@ module JuGDS
 
 using Compat
 
-import	Base: ifelse, joinpath, isfile, show, print, println
+import	Base: ifelse, joinpath, isfile, show, print, println, utf8
 
 export	type_file_gds, type_node_gds, create_gds, open_gds, close_gds,
 		root_gdsn, name_gdsn, rename_gdsn, ls_gdsn, index_gdsn, getfolder_gdsn,
@@ -52,7 +52,7 @@ end
 ####  Type of GDS File and Node	 ####
 
 type type_file_gds
-	filename::String
+	filename::AbstractString
 	id::Int32
 	readonly::Bool
 end
@@ -64,20 +64,20 @@ end
 
 # GDS variable information
 immutable type_info_gdsn
-	name::String
-	fullname::String
-	storage::String
-	trait::String
-	gds_type::String
+	name::UTF8String
+	fullname::UTF8String
+	storage::ASCIIString
+	trait::ASCIIString
+	gds_type::ASCIIString
 	is_array::Bool
 	dim::Vector{Int64}
-	encoder::String
-	compression::String
+	encoder::ASCIIString
+	compression::ASCIIString
 	compression_ratio::Float64
 	size::Int64
 	good::Bool
-	message::String
-	# param::Vector{Int32}
+	hidden::Bool
+	message::UTF8String
 end
 
 
@@ -96,15 +96,15 @@ macro check(ex)
 end
 
 
-function text_push(pobj::Ptr{Void}, txt::Ptr{Uint8}, len::Csize_t)
+function text_push(pobj::Ptr{Void}, txt::Ptr{UInt8}, len::Csize_t)
 	obj = unsafe_pointer_to_objref(pobj)
-	push!(obj, bytestring(txt, len))
+	push!(obj, utf8(txt, len))
 	nothing
 end
 
-function text_set(pobj::Ptr{Void}, index::Csize_t, txt::Ptr{Uint8}, len::Csize_t)
+function text_set(pobj::Ptr{Void}, index::Csize_t, txt::Ptr{UInt8}, len::Csize_t)
 	s = unsafe_pointer_to_objref(pobj)
-	s[index] = bytestring(txt, len)
+	s[index] = utf8(txt, len)
 	nothing
 end
 
@@ -115,31 +115,31 @@ function array_push(pobj::Ptr{Void}, val)
 end
 
 
-const c_text_push  = cfunction(text_push,  Void, (Ptr{Void}, Ptr{Uint8}, Csize_t))
-const c_text_set   = cfunction(text_set,   Void, (Ptr{Void}, Csize_t, Ptr{Uint8}, Csize_t))
+const c_text_push  = cfunction(text_push,  Void, (Ptr{Void}, Ptr{UInt8}, Csize_t))
+const c_text_set   = cfunction(text_set,   Void, (Ptr{Void}, Csize_t, Ptr{UInt8}, Csize_t))
 const c_int64_push = cfunction(array_push, Void, (Ptr{Void}, Int64))
 
 
 
 ####  GDS File  ####
 
-# create a GDS file
-function create_gds(filename::String)
-	id = @check ccall((:GDS_File_Create, libCoreArray), Cint, (Ptr{UInt8},),
+# Create a GDS file
+function create_gds(filename::AbstractString)
+	id = @check ccall((:GDS_File_Create, libCoreArray), Cint, (Cstring,),
 		filename)
 	return type_file_gds(filename, id, false)
 end
 
 
-# open an existing GDS file
-function open_gds(filename::String, readonly::Bool=true)
-	id = @check ccall((:GDS_File_Open, libCoreArray), Cint, (Ptr{UInt8},Bool),
+# Open an existing GDS file
+function open_gds(filename::AbstractString, readonly::Bool=true)
+	id = @check ccall((:GDS_File_Open, libCoreArray), Cint, (Cstring,Bool),
 		filename, readonly)
 	return type_file_gds(filename, id, readonly)
 end
 
 
-# close the GDS file
+# Close the GDS file
 function close_gds(file::type_file_gds)
 	@check ccall((:GDS_File_Close, libCoreArray), Void, (Cint,),
 		file.id)
@@ -150,7 +150,7 @@ function close_gds(file::type_file_gds)
 end
 
 
-# synchronize the GDS file
+# Synchronize the GDS file
 function sync_gds(file::type_file_gds)
 	@check ccall((:GDS_File_Sync, libCoreArray), Void, (Cint,),
 		file.id)
@@ -161,7 +161,7 @@ end
 
 ####  GDS Node  ####
 
-# get the root of GDS file
+# Get the root of GDS file
 function root_gdsn(file::type_file_gds)
 	p = [ C_NULL ]
 	id = @check ccall((:GDS_Node_Root, libCoreArray), Cint,
@@ -170,9 +170,9 @@ function root_gdsn(file::type_file_gds)
 end
 
 
-# get the name of GDS node
+# Get the name of GDS node
 function name_gdsn(obj::type_node_gds, fullname::Bool=false)
-	ss = String[]
+	ss = UTF8String[]
 	@check ccall((:GDS_Node_Name, libCoreArray), Void,
 		(Cint, Ptr{Void}, Bool, Ptr{Void}, Ptr{Void}),
 		obj.id, obj.ptr, fullname, c_text_push, pointer_from_objref(ss))
@@ -180,17 +180,17 @@ function name_gdsn(obj::type_node_gds, fullname::Bool=false)
 end
 
 
-# rename the GDS node
-function rename_gdsn(obj::type_node_gds, newname::String)
+# Rename the GDS node
+function rename_gdsn(obj::type_node_gds, newname::AbstractString)
 	@check ccall((:GDS_Node_Rename, libCoreArray), Void,
-		(Cint, Ptr{Void}, Ptr{UInt8}), obj.id, obj.ptr, newname)
+		(Cint, Ptr{Void}, Cstring), obj.id, obj.ptr, utf8(newname))
 	return obj
 end
 
 
-# get the name(s) of child node
+# Get the name(s) of child node
 function ls_gdsn(obj::type_node_gds, has_hidden::Bool=false)
-	ss = String[]
+	ss = UTF8String[]
 	@check ccall((:GDS_Node_ListName, libCoreArray), Void,
 		(Cint, Ptr{Void}, Bool, Ptr{Void}, Ptr{Void}),
 		obj.id, obj.ptr, has_hidden, c_text_push, pointer_from_objref(ss))
@@ -198,12 +198,12 @@ function ls_gdsn(obj::type_node_gds, has_hidden::Bool=false)
 end
 
 
-# get a specified GDS node with path
-function index_gdsn(obj::type_node_gds, path::String, silent::Bool=false)
+# Get a specified GDS node with path
+function index_gdsn(obj::type_node_gds, path::AbstractString, silent::Bool=false)
 	p = [ C_NULL ]
 	id = @check ccall((:GDS_Node_Index, libCoreArray), Cint,
-		(Cint, Ptr{Void}, Ptr{UInt8}, Bool, Ptr{Ptr{Void}}),
-		obj.id, obj.ptr, path, silent, pointer(p))
+		(Cint, Ptr{Void}, Cstring, Bool, Ptr{Ptr{Void}}),
+		obj.id, obj.ptr, utf8(path), silent, pointer(p))
 	if p[1] != C_NULL
 		return type_node_gds(id, p[1])
 	else
@@ -211,7 +211,7 @@ function index_gdsn(obj::type_node_gds, path::String, silent::Bool=false)
 	end
 end
 
-function index_gdsn(file::type_file_gds, path::String, silent::Bool=false)
+function index_gdsn(file::type_file_gds, path::AbstractString, silent::Bool=false)
 	return index_gdsn(root_gdsn(file), path, silent)
 end
 
@@ -231,8 +231,8 @@ end
 
 # Get the descritpion of a specified node
 function objdesp_gdsn(obj::type_node_gds)
-	ss = String[]
-	dm = Int32[]
+	ss = UTF8String[]
+	dm = Int64[]
 	cpratio = Float64[1]
 	size = Int64[1]
 
@@ -244,9 +244,16 @@ function objdesp_gdsn(obj::type_node_gds)
 			c_int64_push, pointer_from_objref(dm))
 
 	return type_info_gdsn(ss[1], ss[2], ss[3], ss[4], ss[5],
-		flag & 0x01, dm, ss[6], ss[7], cpratio[1], size[1],
-		flag & 0x02, ss[8])
+		(flag & 0x01) != 0, dm, ss[6], ss[7], cpratio[1], size[1],
+		(flag & 0x02) != 0, (flag & 0x04) != 0, ss[8])
 end
+
+
+
+
+
+####  GDS Attributes  ####
+
 
 
 
@@ -257,17 +264,38 @@ end
 
 ####  Display  ####
 
+function size_fmt(size::Int64)
+	if size >= 1000^4
+		return @sprintf("%.1f TB", size/(1000.0^4))
+	elseif size >= 1000^3
+		return @sprintf("%.1f GB", size/(1000.0^3))
+	elseif size >= 1000^2
+		return @sprintf("%.1f MB", size/(1000.0^2))
+	elseif size >= 1000
+		return @sprintf("%.1f KB", size/1000.0)
+	elseif size > 1
+		return @sprintf("%d bytes", size)
+	else
+		return @sprintf("%d byte", size)
+	end
+end
+
+
 function show(io::IO, file::type_file_gds)
-	print_with_color(:bold, "File:")
-	println(" ", file.filename)
+	size = @check ccall((:GDS_FileSize, libCoreArray), Clonglong, (Cint,),
+		file.id)
+	print_with_color(:bold, io, "File:")
+	print_with_color(:black, io, " ", file.filename)
+	print_with_color(:white, io, " (", size_fmt(size), ")")
+	println(io)
 	show(io, root_gdsn(file))
 end
 
 
 function show(io::IO, obj::type_node_gds)
 
-	function enum(obj::type_node_gds, space::String, level::Int, expand::Bool,
-			fullname::Bool)
+	function enum(obj::type_node_gds, space::ASCIIString, level::Int,
+		expand::Bool, fullname::Bool)
 
 		d = objdesp_gdsn(obj)
 
@@ -316,19 +344,7 @@ function show(io::IO, obj::type_node_gds)
 		end
 
 		if d.size >= 0
-			if d.size >= 1000^4
-				s = s * ", " * @sprintf("%.1f TB", d.size/(1000.0^4))
-			elseif d.size >= 1000^3
-				s = s * ", " * @sprintf("%.1f GB", d.size/(1000.0^3))
-			elseif d.size >= 1000^2
-				s = s * ", " * @sprintf("%.1f MB", d.size/(1000.0^2))
-			elseif d.size >= 1000
-				s = s * ", " * @sprintf("%.1f KB", d.size/1000.0)
-			elseif d.size > 1
-				s = s * ", " * @sprintf("%d bytes", d.size)
-			else
-				s = s * ", " * sprintf("%d byte", d.size)
-			end
+			s = s * ", " * size_fmt(d.size)
 		end
 
 		s = s * " " * rText
@@ -337,16 +353,19 @@ function show(io::IO, obj::type_node_gds)
 		#else
 		#	s <- paste(s, " ", rText, sep="")
 
-		print(io, space, "+ ", ifelse(fullname, d.fullname, d.name), "   ")
-		print_with_color(:white, s)
+		print_with_color(:black, io, space, "+ ",
+			ifelse(fullname, d.fullname, d.name), "   ")
+		print_with_color(:white, io, s)
 		println(io)
 		for nm = ls_gdsn(obj)
 			enum(index_gdsn(obj, nm), ifelse(level==1, "|--", "|  ") * space,
 				level+1, expand, false)
 		end
+
+		return nothing
 	end
 
-	print_with_color(:bold, "")
+	print_with_color(:bold, io, "")
 	enum(obj, "", 1, true, true)
 end
 
