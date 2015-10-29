@@ -204,7 +204,9 @@ static const char *ERR_UNKNOWN = "Unknown error!";
 
 COREARRAY_DLL_EXPORT const char *GDS_Error()
 {
-	return (has_error) ? error_info.c_str() : NULL;
+	const char *rv = (has_error) ? error_info.c_str() : NULL;
+	has_error = false;
+	return rv;
 }
 
 
@@ -377,6 +379,26 @@ COREARRAY_DLL_EXPORT C_Int64 GDS_FileSize(int gds_id)
 		rv = GetGDSFile(gds_id)->GetFileSize();
 	CORE_CATCH
 	return rv;
+}
+
+
+/// Get the number of fragments
+COREARRAY_DLL_EXPORT int GDS_NumOfFragment(int gds_id)
+{
+	int rv;
+	CORE_TRY
+		rv = GetGDSFile(gds_id)->GetNumOfFragment();
+	CORE_CATCH
+	return rv;
+}
+
+
+/// Clean up fragments of a GDS file
+COREARRAY_DLL_EXPORT void GDS_TidyUp(int gds_id)
+{
+	CORE_TRY
+		GetGDSFile(gds_id)->TidyUp(false);
+	CORE_CATCH
 }
 
 
@@ -553,6 +575,61 @@ COREARRAY_DLL_EXPORT int GDS_GetFolder(int node_id, PdGDSObj node,
 }
 
 
+/// Delete a node
+COREARRAY_DLL_EXPORT void GDS_DeleteNode(int node_id, PdGDSObj node,
+	C_BOOL Force)
+{
+	CORE_TRY
+		CheckGDSObj(node_id, node, true);
+
+		vector<C_BOOL> DeleteArray;
+		if (dynamic_cast<CdGDSAbsFolder*>(node))
+		{
+			DeleteArray.resize(JuGDS_GDSObj_List.size(), false);
+			size_t idx = 0;
+			vector<PdGDSObj>::iterator p = JuGDS_GDSObj_List.begin();
+			for (; p != JuGDS_GDSObj_List.end(); p++)
+			{
+				if (*p != NULL)
+				{
+					if (static_cast<CdGDSAbsFolder*>(node)->HasChild(*p, true))
+						DeleteArray[idx] = true;
+				}
+				idx ++;
+			}
+		}
+
+		if (node->Folder())
+			node->Folder()->DeleteObj(node, Force);
+		else
+			throw ErrJuGDS("Can not delete the root.");
+
+		// delete GDS objects in GDSFMT_GDSObj_List and GDSFMT_GDSObj_Map
+		vector<PdGDSObj>::iterator p = JuGDS_GDSObj_List.begin();
+		for (; p != JuGDS_GDSObj_List.end(); p++)
+			if (*p == node) *p = NULL;
+		JuGDS_GDSObj_Map.erase(node);
+
+		if (!DeleteArray.empty())
+		{
+			size_t idx = 0;
+			vector<C_BOOL>::iterator p = DeleteArray.begin();
+			for (; p != DeleteArray.end(); p++)
+			{
+				if (*p)
+				{
+					PdGDSObj &Obj = JuGDS_GDSObj_List[idx];
+					JuGDS_GDSObj_Map.erase(Obj);
+					Obj = NULL;
+				}
+				idx ++;
+			}
+		}
+
+	CORE_CATCH
+}
+
+
 /// Get the description of a GDS node
 COREARRAY_DLL_EXPORT int GDS_NodeObjDesp(int node_id, PdGDSObj node,
 	double *CompressionRatio, C_Int64 *Size,
@@ -687,7 +764,10 @@ COREARRAY_DLL_EXPORT int GDS_NodeObjDesp(int node_id, PdGDSObj node,
 			flag |= 0x02;
 		}
 
-		// 13: message
+		// 13: hidden
+		if (node->GetHidden()) flag |= 0x04;
+
+		// 14: message
 		if (dynamic_cast<CdGDSVirtualFolder*>(node))
 		{
 			CdGDSVirtualFolder *v = (CdGDSVirtualFolder*)node;

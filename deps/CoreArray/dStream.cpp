@@ -673,7 +673,8 @@ static short ZLevels[4] =
 
 COREARRAY_INLINE static int ZCheck(int Code)
 {
-	if (Code < 0) throw EZLibError(Code);
+	if ((Code < 0) && (Code != Z_BUF_ERROR))
+		throw EZLibError(Code);
 	return Code;
 }
 
@@ -1859,7 +1860,7 @@ CdBlockStream::TBlockInfo::TBlockInfo()
 	Head = false;
 }
 
-SIZE64 CdBlockStream::TBlockInfo::AbsStart()
+SIZE64 CdBlockStream::TBlockInfo::AbsStart() const
 {
 	return StreamStart - (Head ? (HEAD_SIZE+2*GDS_POS_SIZE) : (2*GDS_POS_SIZE));
 }
@@ -2039,6 +2040,11 @@ SIZE64 CdBlockStream::Seek(SIZE64 Offset, TdSysSeekOrg Origin)
 }
 
 SIZE64 CdBlockStream::GetSize()
+{
+	return fBlockSize;
+}
+
+SIZE64 CdBlockStream::GetSize() const
 {
 	return fBlockSize;
 }
