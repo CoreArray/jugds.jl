@@ -26,7 +26,8 @@ import	Base: ifelse, joinpath, isfile, show, print, println, utf8
 export	type_file_gds, type_node_gds, create_gds, open_gds, close_gds,
 		sync_gds, cleanup_gds,
 		root_gdsn, name_gdsn, rename_gdsn, ls_gdsn, index_gdsn, getfolder_gdsn,
-		delete_gdsn, objdesp_gdsn
+		delete_gdsn, objdesp_gdsn,
+		put_attr_gdsn, get_attr_gdsn, delete_attr_gdsn
 
 
 
@@ -298,14 +299,33 @@ end
 
 
 
-
-
-
-
 ####  GDS Attributes  ####
 
+# Add an attribute to a GDS node
+function put_attr_gdsn(obj::type_node_gds, name::AbstractString, val)
+	return nothing
+end
 
 
+# Get the attributes of a GDS node
+function get_attr_gdsn(obj::type_node_gds)
+	return nothing
+end
+
+# Remove an attribute from a GDS node
+function delete_attr_gdsn(obj::type_node_gds, name::AbstractString)
+	ccall((:GDS_DeleteAttr, libCoreArray), Void,
+		(Cint, Ptr{Void}, Cstring), obj.id, obj.ptr, utf8(name))
+	error_check()
+	return nothing
+end
+
+
+
+
+
+
+####  Data Operations  ####
 
 
 
