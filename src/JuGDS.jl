@@ -43,10 +43,10 @@ if !isfile(libname)
 	error("The CoreArray library cannot be found; it may not have been built correctly.\nTry Pkg.build(\"JuGDS\").")
 end
 
-const libCoreArray = libname
+const LibCoreArray = libname
 
 function __init__()
-	ccall((:GDS_Init, libCoreArray), Void, ())
+	ccall((:GDS_Init, LibCoreArray), Void, ())
 end
 
 
@@ -87,7 +87,7 @@ end
 ####  Internal Functions  ####
 
 function error_check()
-	s = ccall((:GDS_Error, libCoreArray), Ptr{UInt8}, ())
+	s = ccall((:GDS_Error, LibCoreArray), Ptr{UInt8}, ())
 	if s != C_NULL
 		error(bytestring(s))
 	end
@@ -124,7 +124,7 @@ const c_int64_push = cfunction(array_push, Void, (Ptr{Void}, Int64))
 
 # Create a GDS file
 function create_gds(filename::AbstractString)
-	id = ccall((:GDS_File_Create, libCoreArray), Cint, (Cstring,), filename)
+	id = ccall((:GDS_File_Create, LibCoreArray), Cint, (Cstring,), filename)
 	error_check()
 	return type_file_gds(filename, id, false)
 end
@@ -132,7 +132,7 @@ end
 
 # Open an existing GDS file
 function open_gds(filename::AbstractString, readonly::Bool=true)
-	id = ccall((:GDS_File_Open, libCoreArray), Cint, (Cstring,Bool),
+	id = ccall((:GDS_File_Open, LibCoreArray), Cint, (Cstring,Bool),
 		filename, readonly)
 	error_check()
 	return type_file_gds(filename, id, readonly)
@@ -141,7 +141,7 @@ end
 
 # Close the GDS file
 function close_gds(file::type_file_gds)
-	ccall((:GDS_File_Close, libCoreArray), Void, (Cint,), file.id)
+	ccall((:GDS_File_Close, LibCoreArray), Void, (Cint,), file.id)
 	error_check()
 	file.filename = ""
 	file.id = -1
@@ -152,7 +152,7 @@ end
 
 # Synchronize the GDS file
 function sync_gds(file::type_file_gds)
-	ccall((:GDS_File_Sync, libCoreArray), Void, (Cint,), file.id)
+	ccall((:GDS_File_Sync, LibCoreArray), Void, (Cint,), file.id)
 	error_check()
 	return nothing
 end
@@ -163,9 +163,9 @@ function cleanup_gds(filename::AbstractString, verbose::Bool=true)
 	f = open_gds(filename, false)
 	try
 		if verbose
-			size = ccall((:GDS_FileSize, libCoreArray), Clonglong, (Cint,), f.id)
+			size = ccall((:GDS_FileSize, LibCoreArray), Clonglong, (Cint,), f.id)
 			error_check()
-			num  = ccall((:GDS_NumOfFragment, libCoreArray), Cint, (Cint,), f.id)
+			num  = ccall((:GDS_NumOfFragment, LibCoreArray), Cint, (Cint,), f.id)
 			error_check()
 			println("Clean up the fragments of GDS file:")
 			println("\topen the file \"$filename\" (size: $size)")
@@ -174,13 +174,13 @@ function cleanup_gds(filename::AbstractString, verbose::Bool=true)
 			println("\tsave it to \"$fn\"")
 		end
 
-		ccall((:GDS_TidyUp, libCoreArray), Void, (Cint,), f.id)
+		ccall((:GDS_TidyUp, LibCoreArray), Void, (Cint,), f.id)
 		error_check()
 
 		if verbose
-			size = ccall((:GDS_FileSize, libCoreArray), Clonglong, (Cint,), f.id)
+			size = ccall((:GDS_FileSize, LibCoreArray), Clonglong, (Cint,), f.id)
 			error_check()
-			num  = ccall((:GDS_NumOfFragment, libCoreArray), Cint, (Cint,), f.id)
+			num  = ccall((:GDS_NumOfFragment, LibCoreArray), Cint, (Cint,), f.id)
 			error_check()
 			println("\trename \"$fn\" (size: $size)")
 			println("\t# of fragments in total: $num")
@@ -198,7 +198,7 @@ end
 # Get the root of GDS file
 function root_gdsn(file::type_file_gds)
 	p = Ref{Ptr{Void}}(C_NULL)
-	id = ccall((:GDS_Node_Root, libCoreArray), Cint, (Cint, Ref{Ptr{Void}}),
+	id = ccall((:GDS_Node_Root, LibCoreArray), Cint, (Cint, Ref{Ptr{Void}}),
 		file.id, p)
 	error_check()
 	return type_node_gds(id, p[])
@@ -208,7 +208,7 @@ end
 # Get the name of GDS node
 function name_gdsn(obj::type_node_gds, fullname::Bool=false)
 	ss = UTF8String[]
-	ccall((:GDS_Node_Name, libCoreArray), Void,
+	ccall((:GDS_Node_Name, LibCoreArray), Void,
 		(Cint, Ptr{Void}, Bool, Ptr{Void}, Ptr{Void}),
 		obj.id, obj.ptr, fullname, c_text_push, pointer_from_objref(ss))
 	error_check()
@@ -218,7 +218,7 @@ end
 
 # Rename the GDS node
 function rename_gdsn(obj::type_node_gds, newname::AbstractString)
-	ccall((:GDS_Node_Rename, libCoreArray), Void,
+	ccall((:GDS_Node_Rename, LibCoreArray), Void,
 		(Cint, Ptr{Void}, Cstring), obj.id, obj.ptr, utf8(newname))
 	error_check()
 	return obj
@@ -228,7 +228,7 @@ end
 # Get the name(s) of child node
 function ls_gdsn(obj::type_node_gds, has_hidden::Bool=false)
 	ss = UTF8String[]
-	ccall((:GDS_Node_ListName, libCoreArray), Void,
+	ccall((:GDS_Node_ListName, LibCoreArray), Void,
 		(Cint, Ptr{Void}, Bool, Ptr{Void}, Ptr{Void}),
 		obj.id, obj.ptr, has_hidden, c_text_push, pointer_from_objref(ss))
 	error_check()
@@ -239,7 +239,7 @@ end
 # Get a specified GDS node with path
 function index_gdsn(obj::type_node_gds, path::AbstractString, silent::Bool=false)
 	p = Ref{Ptr{Void}}(C_NULL)
-	id = ccall((:GDS_Node_Index, libCoreArray), Cint,
+	id = ccall((:GDS_Node_Index, LibCoreArray), Cint,
 		(Cint, Ptr{Void}, Cstring, Bool, Ref{Ptr{Void}}),
 		obj.id, obj.ptr, utf8(path), silent, p)
 	error_check()
@@ -258,7 +258,7 @@ end
 # Get the folder node which contains the specified node
 function getfolder_gdsn(obj::type_node_gds)
 	p = Ref{Ptr{Void}}(C_NULL)
-	id = ccall((:GDS_GetFolder, libCoreArray), Cint,
+	id = ccall((:GDS_GetFolder, LibCoreArray), Cint,
 		(Cint, Ptr{Void}, Ref{Ptr{Void}}), obj.id, obj.ptr, p)
 	error_check()
 	if p[] != C_NULL
@@ -271,7 +271,7 @@ end
 
 # Delete a specified node
 function delete_gdsn(obj::type_node_gds, force::Bool=false)
-	ccall((:GDS_DeleteNode, libCoreArray), Void,
+	ccall((:GDS_DeleteNode, LibCoreArray), Void,
 		(Cint, Ptr{Void}, Bool), obj.id, obj.ptr, force)
 	error_check()
 	return nothing
@@ -285,7 +285,7 @@ function objdesp_gdsn(obj::type_node_gds)
 	cpratio = Ref{Float64}(NaN)
 	size = Ref{Int64}(-1)
 
-	flag = ccall((:GDS_NodeObjDesp, libCoreArray), Cint,
+	flag = ccall((:GDS_NodeObjDesp, LibCoreArray), Cint,
 		(Cint, Ptr{Void}, Ref{Float64}, Ref{Int64}, Ptr{Void}, Ptr{Void},
 			Ptr{Void}, Ptr{Void}),
 		obj.id, obj.ptr, cpratio, size, c_text_push, pointer_from_objref(ss),
@@ -314,7 +314,7 @@ end
 
 # Remove an attribute from a GDS node
 function delete_attr_gdsn(obj::type_node_gds, name::AbstractString)
-	ccall((:GDS_DeleteAttr, libCoreArray), Void,
+	ccall((:GDS_DeleteAttr, LibCoreArray), Void,
 		(Cint, Ptr{Void}, Cstring), obj.id, obj.ptr, utf8(name))
 	error_check()
 	return nothing
@@ -432,7 +432,7 @@ end
 
 
 function show(io::IO, file::type_file_gds, all=false)
-	size = ccall((:GDS_FileSize, libCoreArray), Clonglong, (Cint,), file.id)
+	size = ccall((:GDS_FileSize, LibCoreArray), Clonglong, (Cint,), file.id)
 	error_check()
 	print_with_color(:bold, io, "File:")
 	print_with_color(:black, io, " ", file.filename)

@@ -27,7 +27,8 @@ CXX = g++
 CXXFLAGS = -O3 -fPIC
 
 ## Options for linker
-LDFLAGS=
+LDFLAGS =
+LDLIBS =
 
 ## Remove directory entries
 RM = rm -rf
@@ -45,6 +46,16 @@ else
 	LIBEXT=dll
 	LINKLIBS=
 endif
+
+
+## julia program
+JL_SHARE = $(shell julia -e 'print(joinpath(JULIA_HOME,Base.DATAROOTDIR,"julia"))')
+CFLAGS   += $(shell $(JL_SHARE)/julia-config.jl --cflags)
+CXXFLAGS += $(shell $(JL_SHARE)/julia-config.jl --cflags)
+LDFLAGS  += $(shell $(JL_SHARE)/julia-config.jl --ldflags)
+LDLIBS   += $(shell $(JL_SHARE)/julia-config.jl --ldlibs)
+
+
 
 
 ## CoreArray library archive file

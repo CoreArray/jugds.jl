@@ -843,7 +843,7 @@ COREARRAY_DLL_EXPORT void GDS_DeleteAttr(int node_id, PdGDSObj node,
 	const char *name)
 {
 	CORE_TRY
-		CheckGDSObj(node_id, node, true);
+		CheckGDSObj(node_id, node, false);
 		node->Attribute().Delete(UTF16Text(name));
 	CORE_CATCH
 }

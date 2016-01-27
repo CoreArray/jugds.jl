@@ -8,7 +8,7 @@
 //
 // dStruct.cpp: Data container - array, matrix, etc
 //
-// Copyright (C) 2007-2015    Xiuwen Zheng
+// Copyright (C) 2007-2016    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -1271,7 +1271,13 @@ SIZE64 CdAllocArray::GDSStreamSize()
 		return -1;
 }
 
-void CdAllocArray::GetOwnBlockStream(vector<const CdBlockStream*> &Out)
+void CdAllocArray::GetOwnBlockStream(vector<const CdBlockStream*> &Out) const
+{
+	Out.clear();
+	if (vAllocStream) Out.push_back(vAllocStream);
+}
+
+void CdAllocArray::GetOwnBlockStream(vector<CdStream*> &Out)
 {
 	Out.clear();
 	if (vAllocStream) Out.push_back(vAllocStream);
@@ -1564,8 +1570,7 @@ CdArrayRead::CdArrayRead()
 }
 
 CdArrayRead::~CdArrayRead()
-{
-}
+{ }
 		
 void CdArrayRead::Init(CdAbstractArray &vObj, int vMargin, C_SVType vSVType,
 	const C_BOOL *const vSelection[], bool buf_if_need)

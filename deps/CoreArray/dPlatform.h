@@ -8,7 +8,7 @@
 //
 // dPlatform.h: Functions for independent platforms
 //
-// Copyright (C) 2007-2015    Xiuwen Zheng
+// Copyright (C) 2007-2016    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -29,7 +29,7 @@
  *	\file     dPlatform.h
  *	\author   Xiuwen Zheng [zhengx@u.washington.edu]
  *	\version  1.0
- *	\date     2007 - 2015
+ *	\date     2007 - 2016
  *	\brief    Functions for independent platforms
  *	\details
 **/
@@ -141,6 +141,8 @@ namespace CoreArray
 
 	/// format a string
 	COREARRAY_DLL_DEFAULT string Format(const char *fmt, ...);
+	/// format a string with text buffer
+	COREARRAY_DLL_DEFAULT void FmtText(char buf[], size_t size, const char *fmt, ...);
 	/// format a string assuming a short string with at most 64 characters
 	COREARRAY_DLL_DEFAULT string _FmtNum(const char *fmt, ...);
 
