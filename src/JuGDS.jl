@@ -1,23 +1,23 @@
 # ===========================================================================
 #
-# JuGDS.jl: Julia Interface to CoreArray Genomic Data Structure (GDS) Files
+# jugds.jl: Julia Interface to CoreArray Genomic Data Structure (GDS) Files
 #
-# Copyright (C) 2015	Xiuwen Zheng
+# Copyright (C) 2015-2017    Xiuwen Zheng
 #
 # This is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License Version 3 as
 # published by the Free Software Foundation.
 #
-# JuGDS is distributed in the hope that it will be useful, but
+# jugds is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
 # GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public
-# License along with JuGDS.
+# License along with jugds.
 # If not, see <http://www.gnu.org/licenses/>.
 
-module JuGDS
+module jugds
 
 using Compat
 
@@ -37,10 +37,10 @@ export	type_file_gds, type_node_gds, create_gds, open_gds, close_gds,
 @osx_only	  libfn = "libCoreArray.dylib"
 @windows_only libfn = "libCoreArray.dll"
 
-global libname = joinpath(Pkg.dir(), "JuGDS", "deps", libfn)
+global libname = joinpath(Pkg.dir(), "jugds", "deps", libfn)
 
 if !isfile(libname)
-	error("The CoreArray library cannot be found; it may not have been built correctly.\nTry Pkg.build(\"JuGDS\").")
+	error("The CoreArray library cannot be found; it may not have been built correctly.\nTry Pkg.build(\"jugds\").")
 end
 
 const LibCoreArray = libname
