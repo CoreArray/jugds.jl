@@ -8,7 +8,7 @@
 //
 // dAllocator.h: Storage allocation
 //
-// Copyright (C) 2007-2016    Xiuwen Zheng
+// Copyright (C) 2007-2017    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -29,7 +29,7 @@
  *	\file     dAllocator.h
  *	\author   Xiuwen Zheng [zhengx@u.washington.edu]
  *	\version  1.0
- *	\date     2007 - 2016
+ *	\date     2007 - 2017
  *	\brief    Storage allocation
  *	\details
 **/
@@ -40,6 +40,7 @@
 #include "dBase.h"
 #include "dTrait.h"
 
+#include <cmath>
 #include <cstring>
 #include <vector>
 
@@ -93,6 +94,20 @@ namespace CoreArray
 		/// read a 64-bit integer with native endianness
 		COREARRAY_FORCEINLINE C_UInt64 R64b()
 			{ return (*_R64b)(*this); }
+
+		/// read a 8-bit integer with native endianness
+		COREARRAY_FORCEINLINE void ReadVar(C_Int8 &val) { val = (*_R8b)(*this); }
+		/// read a 8-bit integer with native endianness
+		COREARRAY_FORCEINLINE void ReadVar(C_UInt8 &val) { val = (*_R8b)(*this); }
+		/// read a 16-bit integer with native endianness
+		COREARRAY_FORCEINLINE void ReadVar(C_Int16 &val) { val = (*_R16b)(*this); }
+		/// read a 16-bit integer with native endianness
+		COREARRAY_FORCEINLINE void ReadVar(C_UInt16 &val) { val = (*_R16b)(*this); }
+		/// read a 32-bit integer with native endianness
+		COREARRAY_FORCEINLINE void ReadVar(C_Int32 &val) { val = (*_R32b)(*this); }
+		/// read a 32-bit integer with native endianness
+		COREARRAY_FORCEINLINE void ReadVar(C_UInt32 &val) { val = (*_R32b)(*this); }
+
 
 		/// write block of data
 		COREARRAY_FORCEINLINE void WriteData(const void *Buffer, ssize_t Count)
@@ -234,6 +249,8 @@ namespace CoreArray
 		int STrait = TdTraits<SourceT>::trVal>
 	struct COREARRAY_DLL_DEFAULT VAL_CONV
 	{
+		typedef DestT Type;
+
 		COREARRAY_INLINE static DestT *Cvt(DestT *p, const SourceT *s, ssize_t n)
 		{
 			// loop unrolling
@@ -267,6 +284,8 @@ namespace CoreArray
 	template<typename TYPE> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<TYPE, TYPE, COREARRAY_TR_INTEGER, COREARRAY_TR_INTEGER>
 	{
+		typedef TYPE Type;
+
 		COREARRAY_INLINE static TYPE *Cvt(TYPE *p, const TYPE *s, ssize_t n)
 		{
 			memcpy(p, s, sizeof(TYPE)*n);
@@ -291,6 +310,8 @@ namespace CoreArray
 	template<typename TYPE> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<TYPE, TYPE, COREARRAY_TR_FLOAT, COREARRAY_TR_FLOAT>
 	{
+		typedef TYPE Type;
+
 		COREARRAY_INLINE static TYPE *Cvt(TYPE *p, const TYPE *s, ssize_t n)
 		{
 			memcpy(p, s, sizeof(TYPE)*n);
@@ -319,15 +340,23 @@ namespace CoreArray
 		struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<DestT, SourceT, COREARRAY_TR_INTEGER, COREARRAY_TR_FLOAT>
 	{
+		typedef struct TType
+		{
+			TType(const SourceT &val) { value = DestT(round(val)); }
+			COREARRAY_INLINE operator DestT() const { return value; }
+		private:
+			DestT value;
+		} Type;
+
 		COREARRAY_INLINE static DestT *Cvt(DestT *p, const SourceT *s, ssize_t n)
 		{
 			// loop unrolling
 			for (; n >= 4; n -= 4, p += 4, s += 4)
 			{
-				p[0] = DestT(s[0]);
-				p[1] = DestT(s[1]);
-				p[2] = DestT(s[2]);
-				p[3] = DestT(s[3]);
+				p[0] = DestT(round(s[0]));
+				p[1] = DestT(round(s[1]));
+				p[2] = DestT(round(s[2]));
+				p[3] = DestT(round(s[3]));
 			}
 			for (; n > 0; n--) *p++ = DestT(*s++);
 			return p;
@@ -337,13 +366,13 @@ namespace CoreArray
 			// loop unrolling
 			for (; n >= 4; n -= 4, s += 4, sel += 4)
 			{
-				if (sel[0]) *p++ = DestT(s[0]);
-				if (sel[1]) *p++ = DestT(s[1]);
-				if (sel[2]) *p++ = DestT(s[2]);
-				if (sel[3]) *p++ = DestT(s[3]);
+				if (sel[0]) *p++ = DestT(round(s[0]));
+				if (sel[1]) *p++ = DestT(round(s[1]));
+				if (sel[2]) *p++ = DestT(round(s[2]));
+				if (sel[3]) *p++ = DestT(round(s[3]));
 			}
 			for (; n > 0; n--, s++, sel++)
-				if (*sel) *p++ = DestT(*s++);
+				if (*sel) *p++ = DestT(round(*s++));
 			return p;
 		}
 	};
@@ -354,6 +383,14 @@ namespace CoreArray
 	template<typename DestT, typename SourceT> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<DestT, SourceT, COREARRAY_TR_INTEGER, COREARRAY_TR_STRING>
 	{
+		typedef struct TType
+		{
+			TType(const SourceT &val) { value = StrToInt(RawText(val).c_str()); }
+			COREARRAY_INLINE operator DestT() const { return value; }
+		private:
+			DestT value;
+		} Type;
+
 		COREARRAY_INLINE static DestT *Cvt(DestT *p, const SourceT *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = StrToInt(RawText(*s++).c_str());
@@ -373,6 +410,14 @@ namespace CoreArray
 	template<typename DestT, typename SourceT> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<DestT, SourceT, COREARRAY_TR_FLOAT, COREARRAY_TR_STRING>
 	{
+		typedef struct TType
+		{
+			TType(const SourceT &val) { value = StrToFloat(RawText(val).c_str()); }
+			COREARRAY_INLINE operator DestT() const { return value; }
+		private:
+			DestT value;
+		} Type;
+
 		COREARRAY_INLINE static DestT *Cvt(DestT *p, const SourceT *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = StrToFloat(RawText(*s++).c_str());
@@ -392,6 +437,14 @@ namespace CoreArray
 	template<typename SourceT> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF8String, SourceT, COREARRAY_TR_STRING, COREARRAY_TR_INTEGER>
 	{
+		typedef struct TType
+		{
+			TType(const SourceT &val) { value = val; }
+			COREARRAY_INLINE operator UTF8String() const { return ASC(IntToStr(value)); }
+		private:
+			SourceT value;
+		} Type;
+
 		COREARRAY_INLINE static UTF8String *Cvt(UTF8String *p, const SourceT *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = ASC(IntToStr(*s++));
@@ -410,6 +463,14 @@ namespace CoreArray
 	template<typename SourceT> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF8String, SourceT, COREARRAY_TR_STRING, COREARRAY_TR_FLOAT>
 	{
+		typedef struct TType
+		{
+			TType(const SourceT &val) { value = val; }
+			COREARRAY_INLINE operator UTF8String() const { return ASC(FloatToStr(value)); }
+		private:
+			SourceT value;
+		} Type;
+
 		COREARRAY_INLINE static UTF8String *Cvt(UTF8String *p, const SourceT *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = ASC(FloatToStr(*s++));
@@ -428,6 +489,14 @@ namespace CoreArray
 	template<> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF16String, UTF8String, COREARRAY_TR_STRING, COREARRAY_TR_STRING>
 	{
+		typedef struct TType
+		{
+			TType(const UTF8String &val): value(val) { }
+			COREARRAY_INLINE operator UTF16String() const { return UTF8ToUTF16(value); }
+		private:
+			const UTF8String &value;
+		} Type;
+
 		COREARRAY_INLINE static UTF16String *Cvt(UTF16String *p, const UTF8String *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = UTF8ToUTF16(*s++);
@@ -446,6 +515,14 @@ namespace CoreArray
 	template<> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF32String, UTF8String, COREARRAY_TR_STRING, COREARRAY_TR_STRING>
 	{
+		typedef struct TType
+		{
+			TType(const UTF8String &val): value(val) { }
+			COREARRAY_INLINE operator UTF32String() const { return UTF8ToUTF32(value); }
+		private:
+			const UTF8String &value;
+		} Type;
+
 		COREARRAY_INLINE static UTF32String *Cvt(UTF32String *p, const UTF8String *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = UTF8ToUTF32(*s++);
@@ -464,6 +541,14 @@ namespace CoreArray
 	template<typename SourceT> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF16String, SourceT, COREARRAY_TR_STRING, COREARRAY_TR_INTEGER>
 	{
+		typedef struct TType
+		{
+			TType(const SourceT &val) { value = val; }
+			COREARRAY_INLINE operator UTF16String() const { return ASC16(IntToStr(value)); }
+		private:
+			SourceT value;
+		} Type;
+
 		COREARRAY_INLINE static UTF16String *Cvt(UTF16String *p, const SourceT *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = ASC16(IntToStr(*s++));
@@ -482,6 +567,14 @@ namespace CoreArray
 	template<typename SourceT> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF16String, SourceT, COREARRAY_TR_STRING, COREARRAY_TR_FLOAT>
 	{
+		typedef struct TType
+		{
+			TType(const SourceT &val) { value = val; }
+			COREARRAY_INLINE operator UTF16String() const { return ASC16(FloatToStr(value)); }
+		private:
+			SourceT value;
+		} Type;
+
 		COREARRAY_INLINE static UTF16String *Cvt(UTF16String *p, const SourceT *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = ASC16(FloatToStr(*s++));
@@ -500,6 +593,14 @@ namespace CoreArray
 	template<> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF8String, UTF16String, COREARRAY_TR_STRING, COREARRAY_TR_STRING>
 	{
+		typedef struct TType
+		{
+			TType(const UTF16String &val): value(val) { }
+			COREARRAY_INLINE operator UTF8String() const { return UTF16ToUTF8(value); }
+		private:
+			const UTF16String &value;
+		} Type;
+
 		COREARRAY_INLINE static UTF8String *Cvt(UTF8String *p, const UTF16String *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = UTF16ToUTF8(*s++);
@@ -518,6 +619,14 @@ namespace CoreArray
 	template<> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF32String, UTF16String, COREARRAY_TR_STRING, COREARRAY_TR_STRING>
 	{
+		typedef struct TType
+		{
+			TType(const UTF16String &val): value(val) { }
+			COREARRAY_INLINE operator UTF32String() const { return UTF16ToUTF32(value); }
+		private:
+			const UTF16String &value;
+		} Type;
+
 		COREARRAY_INLINE static UTF32String *Cvt(UTF32String *p, const UTF16String *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = UTF16ToUTF32(*s++);
@@ -536,6 +645,14 @@ namespace CoreArray
 	template<typename SourceT> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF32String, SourceT, COREARRAY_TR_STRING, COREARRAY_TR_INTEGER>
 	{
+		typedef struct TType
+		{
+			TType(const SourceT &val) { value = val; }
+			COREARRAY_INLINE operator UTF32String() const { return ASC32(IntToStr(value)); }
+		private:
+			SourceT value;
+		} Type;
+
 		COREARRAY_INLINE static UTF32String *Cvt(UTF32String *p, const SourceT *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = ASC32(IntToStr(*s++));
@@ -554,6 +671,14 @@ namespace CoreArray
 	template<typename SourceT> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF32String, SourceT, COREARRAY_TR_STRING, COREARRAY_TR_FLOAT>
 	{
+		typedef struct TType
+		{
+			TType(const SourceT &val) { value = val; }
+			COREARRAY_INLINE operator UTF32String() const { return ASC32(FloatToStr(value)); }
+		private:
+			SourceT value;
+		} Type;
+
 		COREARRAY_INLINE static UTF32String *Cvt(UTF32String *p, const SourceT *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = ASC32(FloatToStr(*s++));
@@ -572,6 +697,14 @@ namespace CoreArray
 	template<> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF8String, UTF32String, COREARRAY_TR_STRING, COREARRAY_TR_STRING>
 	{
+		typedef struct TType
+		{
+			TType(const UTF32String &val): value(val) { }
+			COREARRAY_INLINE operator UTF8String() const { return UTF32ToUTF8(value); }
+		private:
+			const UTF32String &value;
+		} Type;
+
 		COREARRAY_INLINE static UTF8String *Cvt(UTF8String *p, const UTF32String *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = UTF32ToUTF8(*s++);
@@ -590,12 +723,20 @@ namespace CoreArray
 	template<> struct COREARRAY_DLL_DEFAULT
 		VAL_CONV<UTF16String, UTF32String, COREARRAY_TR_STRING, COREARRAY_TR_STRING>
 	{
+		typedef struct TType
+		{
+			TType(const UTF32String &val): value(val) { }
+			COREARRAY_INLINE operator UTF16String() const { return UTF32ToUTF16(value); }
+		private:
+			const UTF32String &value;
+		} Type;
+
 		COREARRAY_INLINE static UTF16String *Cvt(UTF16String *p, const UTF32String *s, ssize_t n)
 		{
 			for (; n > 0; n--) *p++ = UTF32ToUTF16(*s++);
 			return p;
 		}
-		COREARRAY_INLINE static UTF16String *Cvt(UTF16String *p, const UTF32String *s, ssize_t n, const C_BOOL sel[])
+		COREARRAY_INLINE static UTF16String *CvtSub(UTF16String *p, const UTF32String *s, ssize_t n, const C_BOOL sel[])
 		{
 			for (; n > 0; n--, s++, sel++)
 				if (*sel) *p++ = UTF32ToUTF16(*s);
@@ -604,17 +745,95 @@ namespace CoreArray
 	};
 
 
+	// =====================================================================
+
+#ifdef COREARRAY_SIMD_SSE2
+
+	C_Int8* vec_simd_i32_to_i8(C_Int8 *p, const C_Int32 *s, size_t n);
+	C_Int8* vec_simd_i32_to_i8_sel(C_Int8 *p, const C_Int32 *s, size_t n, const C_BOOL sel[]);
+
+	/// Type Convert: int32 to int8
+	template<> struct COREARRAY_DLL_DEFAULT
+		VAL_CONV<C_Int8, C_Int32, COREARRAY_TR_INTEGER, COREARRAY_TR_INTEGER>
+	{
+		typedef C_Int8 Type;
+		COREARRAY_INLINE static C_Int8 *Cvt(C_Int8 *p, const C_Int32 *s, ssize_t n)
+			{ return vec_simd_i32_to_i8(p, s, n); }
+		COREARRAY_INLINE static C_Int8 *CvtSub(C_Int8 *p, const C_Int32 *s, ssize_t n, const C_BOOL sel[])
+			{ return vec_simd_i32_to_i8_sel(p, s, n, sel); }
+	};
+
+	/// Type Convert: int32 to uint8
+	template<> struct COREARRAY_DLL_DEFAULT
+		VAL_CONV<C_UInt8, C_Int32, COREARRAY_TR_INTEGER, COREARRAY_TR_INTEGER>
+	{
+		typedef C_UInt8 Type;
+		COREARRAY_INLINE static C_UInt8 *Cvt(C_UInt8 *p, const C_Int32 *s, ssize_t n)
+			{ return (C_UInt8*)vec_simd_i32_to_i8((C_Int8*)p, s, n); }
+		COREARRAY_INLINE static C_UInt8 *CvtSub(C_UInt8 *p, const C_Int32 *s, ssize_t n, const C_BOOL sel[])
+			{ return (C_UInt8*)vec_simd_i32_to_i8_sel((C_Int8*)p, s, n, sel); }
+	};
+
+	/// Type Convert: uint32 to int8
+	template<> struct COREARRAY_DLL_DEFAULT
+		VAL_CONV<C_Int8, C_UInt32, COREARRAY_TR_INTEGER, COREARRAY_TR_INTEGER>
+	{
+		typedef C_Int8 Type;
+		COREARRAY_INLINE static C_Int8 *Cvt(C_Int8 *p, const C_UInt32 *s, ssize_t n)
+			{ return vec_simd_i32_to_i8(p, (C_Int32*)s, n); }
+		COREARRAY_INLINE static C_Int8 *CvtSub(C_Int8 *p, const C_UInt32 *s, ssize_t n, const C_BOOL sel[])
+			{ return vec_simd_i32_to_i8_sel(p, (C_Int32*)s, n, sel); }
+	};
+
+	/// Type Convert: uint32 to uint8
+	template<> struct COREARRAY_DLL_DEFAULT
+		VAL_CONV<C_UInt8, C_UInt32, COREARRAY_TR_INTEGER, COREARRAY_TR_INTEGER>
+	{
+		typedef C_UInt8 Type;
+		COREARRAY_INLINE static C_UInt8 *Cvt(C_UInt8 *p, const C_UInt32 *s, ssize_t n)
+			{ return (C_UInt8*)vec_simd_i32_to_i8((C_Int8*)p, (C_Int32*)s, n); }
+		COREARRAY_INLINE static C_UInt8 *CvtSub(C_UInt8 *p, const C_UInt32 *s, ssize_t n, const C_BOOL sel[])
+			{ return (C_UInt8*)vec_simd_i32_to_i8_sel((C_Int8*)p, (C_Int32*)s, n, sel); }
+	};
+
+#endif
+
+
+	// =====================================================================
+
+	/// Conversion from SRC_TYPE to DEST_TYPE
+	#define VAL_CONVERT(DEST_TYPE, SRC_TYPE, VAL)  (typename VAL_CONV<DEST_TYPE, SRC_TYPE>::Type(VAL))
+
+	/// Conversion from C_UInt8 to DEST_TYPE
+	#define VAL_CONV_FROM_U8(DEST_TYPE, VAL)  (typename VAL_CONV<DEST_TYPE, C_UInt8>::Type(VAL))
+	/// Conversion from SRC_TYPE to C_UInt8
+	#define VAL_CONV_TO_U8(SRC_TYPE, VAL)  (typename VAL_CONV<C_UInt8, SRC_TYPE>::Type(VAL))
+
+	/// Conversion from C_UInt64 to DEST_TYPE
+	#define VAL_CONV_FROM_U64(DEST_TYPE, VAL)  (typename VAL_CONV<DEST_TYPE, C_UInt64>::Type(VAL))
+	/// Conversion from SRC_TYPE to C_UInt64
+	#define VAL_CONV_TO_U64(SRC_TYPE, VAL)  (typename VAL_CONV<C_UInt64, SRC_TYPE>::Type(VAL))
+
+	/// Conversion from C_Int64 to DEST_TYPE
+	#define VAL_CONV_FROM_I64(DEST_TYPE, VAL)  (typename VAL_CONV<DEST_TYPE, C_Int64>::Type(VAL))
+	/// Conversion from SRC_TYPE to C_Int64
+	#define VAL_CONV_TO_I64(SRC_TYPE, VAL)  (typename VAL_CONV<C_Int64, SRC_TYPE>::Type(VAL))
+
+	/// Conversion from C_Float64 to DEST_TYPE
+	#define VAL_CONV_FROM_F64(DEST_TYPE, VAL)  (typename VAL_CONV<DEST_TYPE, C_Float64>::Type(VAL))
+	/// Conversion from SRC_TYPE to C_Float64
+	#define VAL_CONV_TO_F64(SRC_TYPE, VAL)  (typename VAL_CONV<C_Float64, SRC_TYPE>::Type(VAL))
+
+
 
 	/// Conversion from SourceT to DestT
 	/** \tparam  DestT    type of destination
 	 *  \tparam  SourceT  type of source
 	**/
 	template<typename DestT, typename SourceT>
-	static COREARRAY_FORCEINLINE DestT ValCvt(const SourceT &val)
+		static COREARRAY_INLINE DestT ValCvt(const SourceT &val)
 	{
-		DestT ans;
-		VAL_CONV<DestT, SourceT>::Cvt(&ans, &val, 1);
-		return ans;
+		return VAL_CONVERT(DestT, SourceT, val);
 	}
 
 	/// Conversion from SourceT to DestT
@@ -622,7 +841,7 @@ namespace CoreArray
 	 *  \tparam  SourceT  type of source
 	**/
 	template<typename DestT, typename SourceT>
-	static COREARRAY_FORCEINLINE DestT *ValCvtArray(DestT *p, const SourceT *s, ssize_t n)
+		static COREARRAY_INLINE DestT *ValCvtArray(DestT *p, const SourceT *s, ssize_t n)
 	{
 		return VAL_CONV<DestT, SourceT>::Cvt(p, s, n);
 	}
@@ -637,13 +856,11 @@ namespace CoreArray
 	const size_t COREARRAY_ALLOC_FUNC_BUFFER = 0x10000;
 
 	/// Template functions for allocator
-	template<typename ALLOC_TYPE, typename MEM_TYPE,
-		bool MEM_TYPE_IS_NUMERIC =
-			(TdTraits<MEM_TYPE>::trVal & COREARRAY_TR_NUMERIC_FLAG) != 0 >
+	template<typename ALLOC_TYPE, typename MEM_TYPE>
 		struct COREARRAY_DLL_DEFAULT ALLOC_FUNC
 	{
 		/// read an array from CdAllocator
-		static MEM_TYPE *Read(CdBaseIterator &I, MEM_TYPE *Buffer, ssize_t n)
+		static MEM_TYPE *Read(CdBaseIterator &I, MEM_TYPE *p, ssize_t n)
 		{
 			const ssize_t N = COREARRAY_ALLOC_FUNC_BUFFER / sizeof(ALLOC_TYPE);
 			ALLOC_TYPE Buf[N];
@@ -654,15 +871,14 @@ namespace CoreArray
 			{
 				ssize_t Cnt = (n >= N) ? N : n;
 				ss.R(Buf, Cnt);
-				Buffer = VAL_CONV<MEM_TYPE, ALLOC_TYPE>::Cvt(Buffer, Buf, Cnt);
+				p = VAL_CONV<MEM_TYPE, ALLOC_TYPE>::Cvt(p, Buf, Cnt);
 				n -= Cnt;
 			}
-			return Buffer;
+			return p;
 		}
 
-		/// read an array from CdAllocator
-		static MEM_TYPE *ReadEx(CdBaseIterator &I, MEM_TYPE *Buffer, ssize_t n,
-			const C_BOOL Sel[])
+		/// read an array from CdAllocator with selection
+		static MEM_TYPE *ReadEx(CdBaseIterator &I, MEM_TYPE *p, ssize_t n, const C_BOOL Sel[])
 		{
 			const ssize_t N = COREARRAY_ALLOC_FUNC_BUFFER / sizeof(ALLOC_TYPE);
 			ALLOC_TYPE Buf[N];
@@ -673,17 +889,16 @@ namespace CoreArray
 			{
 				ssize_t m = (n <= N) ? n : N;
 				ss.R(Buf, m);
-				Buffer = VAL_CONV<MEM_TYPE, ALLOC_TYPE>::CvtSub(
-					Buffer, Buf, m, Sel);
+				p = VAL_CONV<MEM_TYPE, ALLOC_TYPE>::CvtSub(
+					p, Buf, m, Sel);
 				Sel += m;
 				n -= m;
 			}
-			return Buffer;
+			return p;
 		}
 
 		/// write an array to CdAllocator
-		static const MEM_TYPE *Write(CdBaseIterator &I, const MEM_TYPE *Buffer,
-			ssize_t n)
+		static const MEM_TYPE *Write(CdBaseIterator &I, const MEM_TYPE *p, ssize_t n)
 		{
 			const ssize_t N = COREARRAY_ALLOC_FUNC_BUFFER / sizeof(ALLOC_TYPE);
 			ALLOC_TYPE Buf[N];
@@ -692,33 +907,32 @@ namespace CoreArray
 			while (n > 0)
 			{
 				ssize_t Cnt = (n >= N) ? N : n;
-				VAL_CONV<ALLOC_TYPE, MEM_TYPE>::Cvt(Buf, Buffer, Cnt);
-				Buffer += Cnt;
+				VAL_CONV<ALLOC_TYPE, MEM_TYPE>::Cvt(Buf, p, Cnt);
+				p += Cnt;
 				COREARRAY_ENDIAN_NT_TO_LE_ARRAY(Buf, Cnt);
 				I.Allocator->WriteData(Buf, Cnt*sizeof(ALLOC_TYPE));
 				n -= Cnt;
 			}
-			return Buffer;
+			return p;
 		}
 	};
 
 	/// Template functions for allocator
-	template<typename TYPE, bool IS_NUMERIC>
-		struct COREARRAY_DLL_DEFAULT ALLOC_FUNC<TYPE, TYPE, IS_NUMERIC>
+	template<typename TYPE>
+		struct COREARRAY_DLL_DEFAULT ALLOC_FUNC<TYPE, TYPE>
 	{
 		/// read an array from CdAllocator
-		static TYPE *Read(CdBaseIterator &I, TYPE *Buffer, ssize_t n)
+		static TYPE *Read(CdBaseIterator &I, TYPE *p, ssize_t n)
 		{
 			BYTE_LE<CdAllocator> ss(I.Allocator);
 			I.Allocator->SetPosition(I.Ptr);
 			I.Ptr += n * sizeof(TYPE);
-			ss.R(Buffer, n);
-			return Buffer + n;
+			ss.R(p, n);
+			return p + n;
 		}
 
-		/// read an array from CdAllocator
-		static TYPE *ReadEx(CdBaseIterator &I, TYPE *Buffer, ssize_t n,
-			const C_BOOL Sel[])
+		/// read an array from CdAllocator with selection
+		static TYPE *ReadEx(CdBaseIterator &I, TYPE *p, ssize_t n, const C_BOOL Sel[])
 		{
 			const ssize_t N = COREARRAY_ALLOC_FUNC_BUFFER / sizeof(TYPE);
 			TYPE Buf[N];
@@ -729,22 +943,21 @@ namespace CoreArray
 			{
 				ssize_t m = (n <= N) ? n : N;
 				ss.R(Buf, m);
-				Buffer = VAL_CONV<TYPE, TYPE>::CvtSub(Buffer, Buf, m, Sel);
+				p = VAL_CONV<TYPE, TYPE>::CvtSub(p, Buf, m, Sel);
 				Sel += m;
 				n -= m;
 			}
-			return Buffer;
+			return p;
 		}
 
 		/// write an array to CdAllocator
-		static const TYPE *Write(CdBaseIterator &I, const TYPE *Buffer,
-			ssize_t n)
+		static const TYPE *Write(CdBaseIterator &I, const TYPE *p, ssize_t n)
 		{
 			BYTE_LE<CdAllocator> ss(I.Allocator);
 			I.Allocator->SetPosition(I.Ptr);
 			I.Ptr += n * sizeof(TYPE);
-			ss.W(Buffer, n);
-			return Buffer + n;
+			ss.W(p, n);
+			return p + n;
 		}
 	};
 

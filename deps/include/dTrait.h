@@ -8,7 +8,7 @@
 //
 // dTrait.h: Trait classes for elementary types
 //
-// Copyright (C) 2007-2016    Xiuwen Zheng
+// Copyright (C) 2007-2017    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -29,7 +29,7 @@
  *	\file     dTrait.h
  *	\author   Xiuwen Zheng [zhengx@u.washington.edu]
  *	\version  1.0
- *	\date     2007 - 2016
+ *	\date     2007 - 2017
  *	\brief    Trait classes for elementary types
  *	\details
 **/
@@ -60,6 +60,7 @@ namespace CoreArray
 
 	#define COREARRAY_TR_INTEGER                   (COREARRAY_TR_INT_FLAG | 0)
 	#define COREARRAY_TR_BIT_INTEGER               (COREARRAY_TR_INT_FLAG | 1)
+	#define COREARRAY_TR_VARIABLE_LENGTH_INTEGER   (COREARRAY_TR_INT_FLAG | 2)
 
 	#define COREARRAY_TR_FLOAT                     (COREARRAY_TR_REAL_FLAG | 0)
 	#define COREARRAY_TR_PACKED_REAL               (COREARRAY_TR_REAL_FLAG | 1)

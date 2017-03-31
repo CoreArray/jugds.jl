@@ -28,7 +28,8 @@ CXXFLAGS = -O3 -fPIC
 
 ## Options for linker
 LDFLAGS =
-LDLIBS =
+LDLIBS = -lz -llzma
+
 
 ## Remove directory entries
 RM = rm -rf
@@ -56,6 +57,11 @@ LDFLAGS  += $(shell $(JL_SHARE)/julia-config.jl --ldflags)
 LDLIBS   += $(shell $(JL_SHARE)/julia-config.jl --ldlibs)
 
 
+## Define lib macro and include
+LIBMACRO = -DCOREARRAY_USE_ZLIB_EXT -DCOREARRAY_USE_LZMA_EXT -DCOREARRAY_NO_LZ4
+LIBINCLUDE = -Iinclude
+CFLAGS   += $(LIBMACRO) $(LIBINCLUDE)
+CXXFLAGS += $(LIBMACRO) $(LIBINCLUDE)
 
 
 ## CoreArray library archive file
@@ -64,22 +70,7 @@ LIB_COREARRAY_A = libCoreArray.a
 ## CoreArray library object files
 LIB_COREOBJS = CoreArray.o dAllocator.o dAny.o dBase.o dBitGDS.o \
 	dEndian.o dFile.o dParallel.o dParallel_Ext.o dPlatform.o dSerial.o \
-	dStream.o dStruct.o
-
-
-## zlib library
-LIB_ZIP_A = libZLIB.a
-
-## ZLIB library object files
-LIB_ZLIBOBJS = adler32.o compress.o crc32.o deflate.o infback.o \
-	inffast.o inflate.o inftrees.o trees.o uncompr.o zutil.o
-
-
-## lz4 library
-LIB_LZ4_A = libLZ4.a
-
-## LZ4 library object files
-LIB_LZ4OBJS = lz4.o lz4hc.o lz4frame.o xxhash.o
+	dStream.o dStruct.o dVLIntGDS.o
 
 
 ## Julia interface
@@ -87,10 +78,10 @@ LIB_J_OBJS = J_CoreArray.o
 
 
 ## all jobs
-all: $(LIB_COREOBJS) $(LIB_ZLIBOBJS) $(LIB_LZ4OBJS) $(LIB_J_OBJS)
+all: $(LIB_COREOBJS) $(LIB_J_OBJS)
 	$(CXX) $(CXXFLAGS) -shared \
-		$(LIB_COREOBJS) $(LIB_ZLIBOBJS) $(LIB_LZ4OBJS) $(LIB_J_OBJS) \
-		$(LDFLAGS) $(LINKLIBS) -o libCoreArray.$(LIBEXT)
+		$(LIB_COREOBJS) $(LIB_J_OBJS) \
+		$(LDFLAGS) $(LINKLIBS) $(LDLIBS) -o libCoreArray.$(LIBEXT)
 
 
 ## Clean and remove files
@@ -149,53 +140,5 @@ dStream.o:
 dStruct.o:
 	$(CXX) $(CXXFLAGS) CoreArray/dStruct.cpp -c -o $@
 
-
-##  ZLIB Library  ##
-
-adler32.o:
-	$(CC) $(CFLAGS) ZLIB/adler32.c -c -o $@
-
-compress.o:
-	$(CC) $(CFLAGS) ZLIB/compress.c -c -o $@
-
-crc32.o:
-	$(CC) $(CFLAGS) ZLIB/crc32.c -c -o $@
-
-deflate.o:
-	$(CC) $(CFLAGS) ZLIB/deflate.c -c -o $@
-
-infback.o:
-	$(CC) $(CFLAGS) ZLIB/infback.c -c -o $@
-
-inffast.o:
-	$(CC) $(CFLAGS) ZLIB/inffast.c -c -o $@
-
-inflate.o:
-	$(CC) $(CFLAGS) ZLIB/inflate.c -c -o $@
-
-inftrees.o:
-	$(CC) $(CFLAGS) ZLIB/inftrees.c -c -o $@
-
-trees.o:
-	$(CC) $(CFLAGS) ZLIB/trees.c -c -o $@
-
-uncompr.o:
-	$(CC) $(CFLAGS) ZLIB/uncompr.c -c -o $@
-
-zutil.o:
-	$(CC) $(CFLAGS) ZLIB/zutil.c -c -o $@
-
-
-##  LZ4 Library  ##
-
-lz4.o:
-	$(CC) $(CFLAGS) LZ4/lz4.c -c -o $@
-
-lz4hc.o:
-	$(CC) $(CFLAGS) LZ4/lz4hc.c -c -o $@
-
-lz4frame.o:
-	$(CC) $(CFLAGS) LZ4/lz4frame.c -c -o $@
-
-xxhash.o:
-	$(CC) $(CFLAGS) LZ4/xxhash.c -c -o $@
+dVLIntGDS.o:
+	$(CXX) $(CXXFLAGS) CoreArray/dVLIntGDS.cpp -c -o $@

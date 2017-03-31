@@ -1,19 +1,19 @@
-JuGDS: Julia Interface to CoreArray Genomic Data Structure (GDS) Files
+jugds: Julia Interface to CoreArray Genomic Data Structure (GDS) Files
 ===
 
 ![LGPLv3](http://www.gnu.org/graphics/lgplv3-88x31.png)
 [GNU Lesser General Public License, LGPL-3](https://www.gnu.org/licenses/lgpl.html)
 
-[![Build Status](https://travis-ci.org/CoreArray/JuGDS.jl.png)](https://travis-ci.org/CoreArray/JuGDS.jl)
+[![Build Status](https://travis-ci.org/CoreArray/jugds.jl.png)](https://travis-ci.org/CoreArray/jugds.jl)
 
 
 ## Installation
 
-* Development version from Github, requiring `julia >= v0.4`
+* Development version from Github, requiring `julia >= v0.5`
 ```julia
 Pkg.status()
-Pkg.clone("https://github.com/CoreArray/JuGDS.jl.git")
-Pkg.build("JuGDS")
+Pkg.clone("https://github.com/CoreArray/jugds.jl.git")
+Pkg.build("jugds")
 ```
 
 

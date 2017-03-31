@@ -8,7 +8,7 @@
 //
 // dStruct.cpp: Data container - array, matrix, etc
 //
-// Copyright (C) 2007-2016    Xiuwen Zheng
+// Copyright (C) 2007-2017    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -487,186 +487,181 @@ void CdAbstractArray::Assign(CdGDSObj &Source, bool Full)
 		RaiseInvalidAssign(dName(), &Source);
 }
 
-void CdAbstractArray::ReadData(const C_Int32 *Start, const C_Int32 *Length,
+void *CdAbstractArray::ReadData(const C_Int32 *Start, const C_Int32 *Length,
 	void *OutBuffer, C_SVType OutSV)
 {
-	if ((Start != NULL) || (Length != NULL))
+	TArrayDim DStart, DLength;
+	if (!Start)
 	{
-		_CheckRect(Start, Length);
+		memset(DStart, 0, sizeof(C_Int32)*DimCnt());
+		Start = DStart;
 	}
+	if (!Length)
+	{
+		GetDim(DLength);
+		Length = DLength;
+	}
+
+	_CheckRect(Start, Length);
 	switch (OutSV)
 	{
 		case svInt8:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(C_Int8*)OutBuffer, IIndex, ITER_INT<C_Int8>::Read);
-			break;
 		case svUInt8:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(C_UInt8*)OutBuffer, IIndex, ITER_INT<C_UInt8>::Read);
-			break;
 		case svInt16:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(C_Int16*)OutBuffer, IIndex, ITER_INT<C_Int16>::Read);
-			break;
 		case svUInt16:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(C_UInt16*)OutBuffer, IIndex, ITER_INT<C_UInt16>::Read);
-			break;
 		case svInt32:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(C_Int32*)OutBuffer, IIndex, ITER_INT<C_Int32>::Read);
-			break;
 		case svUInt32:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(C_UInt32*)OutBuffer, IIndex, ITER_INT<C_UInt32>::Read);
-			break;
 		case svInt64:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(C_Int64*)OutBuffer, IIndex, ITER_INT<C_Int64>::Read);
-			break;
 		case svUInt64:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(C_UInt64*)OutBuffer, IIndex, ITER_INT<C_UInt64>::Read);
-			break;
 		case svFloat32:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(C_Float32*)OutBuffer, IIndex, ITER_FLOAT<C_Float32>::Read);
-			break;
 		case svFloat64:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(C_Float64*)OutBuffer, IIndex, ITER_FLOAT<C_Float64>::Read);
-			break;
 		case svStrUTF8:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(UTF8String*)OutBuffer, IIndex, ITER_STR8_Read);
-			break;
 		case svStrUTF16:
-			ArrayRIterRect(Start, Length, DimCnt(), *this,
+			return ArrayRIterRect(Start, Length, DimCnt(), *this,
 				(UTF16String*)OutBuffer, IIndex, ITER_STR16_Read);
-			break;
 		default:
 			throw ErrArray(ERR_READ_INV_SV);
 	}
 }
 
-void CdAbstractArray::ReadDataEx(const C_Int32 *Start, const C_Int32 *Length,
+void *CdAbstractArray::ReadDataEx(const C_Int32 *Start, const C_Int32 *Length,
 	const C_BOOL *const Selection[], void *OutBuffer, C_SVType OutSV)
 {
 	if (Selection == NULL)
+		return ReadData(Start, Length, OutBuffer, OutSV);
+
+	TArrayDim DStart, DLength;
+	if (!Start)
 	{
-		ReadData(Start, Length, OutBuffer, OutSV);
-		return;
+		memset(DStart, 0, sizeof(C_Int32)*DimCnt());
+		Start = DStart;
 	}
+	if (!Length)
+	{
+		GetDim(DLength);
+		Length = DLength;
+	}
+
 	_CheckRect(Start, Length);
 	switch (OutSV)
 	{
 		case svInt8:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(C_Int8*)OutBuffer, IIndex, ITER_INT<C_Int8>::ReadEx);
-			break;
 		case svUInt8:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(C_UInt8*)OutBuffer, IIndex, ITER_INT<C_UInt8>::ReadEx);
-			break;
 		case svInt16:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(C_Int16*)OutBuffer, IIndex, ITER_INT<C_Int16>::ReadEx);
-			break;
 		case svUInt16:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(C_UInt16*)OutBuffer, IIndex, ITER_INT<C_UInt16>::ReadEx);
-			break;
 		case svInt32:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(C_Int32*)OutBuffer, IIndex, ITER_INT<C_Int32>::ReadEx);
-			break;
 		case svUInt32:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(C_UInt32*)OutBuffer, IIndex, ITER_INT<C_UInt32>::ReadEx);
-			break;
 		case svInt64:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(C_Int64*)OutBuffer, IIndex, ITER_INT<C_Int64>::ReadEx);
-			break;
 		case svUInt64:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(C_UInt64*)OutBuffer, IIndex, ITER_INT<C_UInt64>::ReadEx);
-			break;
 		case svFloat32:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(C_Float32*)OutBuffer, IIndex, ITER_FLOAT<C_Float32>::ReadEx);
-			break;
 		case svFloat64:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(C_Float64*)OutBuffer, IIndex, ITER_FLOAT<C_Float64>::ReadEx);
-			break;
 		case svStrUTF8:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(UTF8String*)OutBuffer, IIndex, ITER_STR8_ReadEx);
-			break;
 		case svStrUTF16:
-			ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
+			return ArrayRIterRectEx(Start, Length, Selection, DimCnt(), *this,
 				(UTF16String*)OutBuffer, IIndex, ITER_STR16_ReadEx);
-			break;
 		default:
 			throw ErrArray(ERR_READEX_INV_SV);
 	}
 }
 
-void CdAbstractArray::WriteData(const C_Int32 *Start, const C_Int32 *Length,
-	void const *InBuffer, C_SVType InSV)
+const void *CdAbstractArray::WriteData(const C_Int32 *Start,
+	const C_Int32 *Length, const void *InBuffer, C_SVType InSV)
 {
+	TArrayDim DStart, DLength;
+	if (!Start)
+	{
+		memset(DStart, 0, sizeof(C_Int32)*DimCnt());
+		Start = DStart;
+	}
+	if (!Length)
+	{
+		GetDim(DLength);
+		Length = DLength;
+	}
+
 	_CheckRect(Start, Length);
 	switch (InSV)
 	{
 		case svInt8:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const C_Int8*)InBuffer, IIndex, ITER_INT<C_Int8>::Write);
-			break;
 		case svUInt8:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const C_UInt8*)InBuffer, IIndex, ITER_INT<C_UInt8>::Write);
-			break;
 		case svInt16:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const C_Int16*)InBuffer, IIndex, ITER_INT<C_Int16>::Write);
-			break;
 		case svUInt16:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const C_UInt16*)InBuffer, IIndex, ITER_INT<C_UInt16>::Write);
-			break;
 		case svInt32:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const C_Int32*)InBuffer, IIndex, ITER_INT<C_Int32>::Write);
-			break;
 		case svUInt32:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const C_UInt32*)InBuffer, IIndex, ITER_INT<C_UInt32>::Write);
-			break;
 		case svInt64:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const C_Int64*)InBuffer, IIndex, ITER_INT<C_Int64>::Write);
-			break;
 		case svUInt64:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const C_UInt64*)InBuffer, IIndex, ITER_INT<C_UInt64>::Write);
-			break;
 		case svFloat32:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const C_Float32*)InBuffer, IIndex, ITER_FLOAT<C_Float32>::Write);
-			break;
 		case svFloat64:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const C_Float64*)InBuffer, IIndex, ITER_FLOAT<C_Float64>::Write);
-			break;
 		case svStrUTF8:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const UTF8String*)InBuffer, IIndex, ITER_STR8_Write);
-			break;
 		case svStrUTF16:
-			ArrayWIterRect(Start, Length, DimCnt(), *this,
+			return ArrayWIterRect(Start, Length, DimCnt(), *this,
 				(const UTF16String*)InBuffer, IIndex, ITER_STR16_Write);
-			break;
 		default:
 			throw ErrArray(ERR_WRITE_INV_SV);
 	}
@@ -893,7 +888,6 @@ CdAllocArray::CdAllocArray(ssize_t vElmSize): CdAbstractArray()
 	vAllocStream = NULL;
 	vAlloc_Ptr = vCnt_Ptr = 0;
 	fNeedUpdate = false;
-	_OnFlushEvent = NULL;
 }
 
 CdAllocArray::~CdAllocArray()
@@ -1219,16 +1213,19 @@ void CdAllocArray::SetPackedMode(const char *Mode)
 	}
 }
 
-void CdAllocArray::Append(const void *Buffer, ssize_t Cnt, C_SVType InSV)
+const void *CdAllocArray::Append(const void *Buffer, ssize_t Cnt, C_SVType InSV)
 {
-	if (Cnt <= 0) return;
+	if (Cnt <= 0) return Buffer;
 	if (!COREARRAY_SV_VALID(InSV)) throw ErrArray(ERR_APPEND_SV);
 
 	// writing
 	_SetLargeBuffer();
 	fAllocator.SetPosition(fTotalCount*fElmSize);
-	fAllocator.WriteData(Buffer, Cnt*fElmSize);
 
+	size_t size = Cnt*fElmSize;
+	fAllocator.WriteData(Buffer, Cnt*fElmSize);
+	Buffer = (const char*)Buffer + size;
+	
 	// check
 	TDimItem &R = fDimension.front();
 	fTotalCount += Cnt;
@@ -1238,6 +1235,7 @@ void CdAllocArray::Append(const void *Buffer, ssize_t Cnt, C_SVType InSV)
 		_SetFlushEvent();
 		fNeedUpdate = true;
 	}
+	return Buffer;
 }
 
 void CdAllocArray::AppendIter(CdIterator &I, C_Int64 Count)
@@ -1291,15 +1289,41 @@ void CdAllocArray::Caching()
 
 		vAllocStream->SetPosition(SavePos);
 	}
+
+	if (Allocator().BufStream())
+	{
+		CdStream *s = Allocator().BufStream()->Stream();
+		if (dynamic_cast<CdZDecoder_RA*>(s))
+		{
+			dynamic_cast<CdZDecoder_RA*>(s)->GetUpdated();
+	#ifndef COREARRAY_NO_LZ4
+		} else if (dynamic_cast<CdLZ4Decoder_RA*>(s))
+		{
+			dynamic_cast<CdLZ4Decoder_RA*>(s)->GetUpdated();
+	#endif
+	#ifndef COREARRAY_NO_LZMA
+		} else if (dynamic_cast<CdXZDecoder_RA*>(s))
+		{
+			dynamic_cast<CdXZDecoder_RA*>(s)->GetUpdated();
+	#endif
+		}
+	}
 }
 
 SIZE64 CdAllocArray::GDSStreamSize()
 {
-	if (vAllocStream)
+	vector<CdStream*> ss;
+	GetOwnBlockStream(ss);
+	SIZE64 rv;
+	if (!ss.empty())
 	{
-		return vAllocStream->GetSize();
-	} else
-		return -1;
+		rv = 0;
+		for (size_t i=0; i < ss.size(); i++)
+			rv += ss[i]->GetSize();
+	} else {
+		rv = -1;
+	}
+	return rv;
 }
 
 void CdAllocArray::GetOwnBlockStream(vector<const CdBlockStream*> &Out) const
@@ -1326,6 +1350,8 @@ void CdAllocArray::_CheckRange(const C_Int32 DimI[])
 
 void CdAllocArray::_CheckRect(const C_Int32 *Start, const C_Int32 *Length)
 {
+	if ((Start==NULL) || (Length==NULL))
+		throw ErrArray(ERR_INV_DIM_RECT);
 	vector<TDimItem>::iterator it;
 	for (it=fDimension.begin(); it != fDimension.end(); it++)
 	{
@@ -1467,10 +1493,8 @@ void CdAllocArray::UpdateInfo(CdBufStream *Sender)
 			W.SetPosition(vCnt_Ptr);
 			W.W(DBuf, fDimension.size());
 		}
-
 		// call external function
-		if (_OnFlushEvent)
-			(*_OnFlushEvent)(this, Sender);
+		UpdateInfoExt(Sender);
 
 		fNeedUpdate = false;
 	}
@@ -1480,6 +1504,9 @@ void CdAllocArray::UpdateInfo(CdBufStream *Sender)
 	if (fAllocator.BufStream())
 		fAllocator.BufStream()->OnFlush.Clear();
 }
+
+void CdAllocArray::UpdateInfoExt(CdBufStream *Sender)
+{ }
 
 void CdAllocArray::SetElmSize(ssize_t NewSize)
 {
@@ -1592,12 +1619,15 @@ CdArrayRead::CdArrayRead()
 	fObject = NULL;
 	fMargin = 0;
 	fSVType = svCustom;
-	fIndex = fCount = 0;
+	fElmSize = 0;
+	fIndex = fCount = fMarginIndex = 0;
 	fMarginCount = 0;
 	fMarginIndex = _MarginStart = _MarginEnd = 0;
 	_Margin_Buf_IncCnt = 0;
 	_Margin_Buf_Cnt = 0;
+	_Have_Selection = false;
 	_Call_rData = _Margin_Call_rData = true;
+	_Margin_Buf_Need = false;
 }
 
 CdArrayRead::~CdArrayRead()

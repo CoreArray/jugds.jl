@@ -8,7 +8,7 @@
 //
 // dSerial.h: Serialization between class objects and stream data
 //
-// Copyright (C) 2007-2016    Xiuwen Zheng
+// Copyright (C) 2007-2017    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -29,7 +29,7 @@
  *	\file     dSerial.h
  *	\author   Xiuwen Zheng [zhengx@u.washington.edu]
  *	\version  1.0
- *	\date     2007 - 2016
+ *	\date     2007 - 2017
  *	\brief    Serialization between class objects and stream data
  *	\details
 **/
@@ -531,12 +531,7 @@ namespace CoreArray
 		typedef void (*TdInit)(CdObjClassMgr &Sender, CdObject *dObj, void *Data);
 		typedef void (CdObject::*TdInitEx)(CdObjClassMgr &Sender, CdObject *dObj, void *Data);
 
-		struct _strCmp
-		{
-			bool operator()(const char* s1, const char* s2) const;
-		};
-
-		/// The registered class type
+		/// registered class type
 		enum ClassType
 		{
 			ctCustom = 0,  ///< user-defined
@@ -545,19 +540,29 @@ namespace CoreArray
 			ctStream       ///< stream
 		};
 
-		struct _ClassStruct
+		/// class structure
+		struct TClassStruct
 		{
 			TdOnObjCreate OnCreate;
 			const char *Desp;
 			ClassType CType;
 		};
 
-		/// Constructor
+		/// strict weak ordering for two strings
+		struct TStrCmp
+		{
+			bool operator()(const char* s1, const char* s2) const;
+		};
+
+		/// a class map
+		typedef std::map<const char *, TClassStruct, TStrCmp> TClassMap;
+
+		/// constructor
 		CdObjClassMgr();
-		/// Destructor
+		/// destructor
 		virtual ~CdObjClassMgr();
 
-		/// Register a class
+		/// register a class
 		/** \param ClassName  the name of class
 		 *  \param OnCreate   a function of creator
 		 *  \param vCType     the type of class
@@ -565,12 +570,12 @@ namespace CoreArray
 		**/
 		void AddClass(const char *ClassName, TdOnObjCreate OnCreate,
 			ClassType vCType, const char *Desp="");
-		/// Unregister a class
+		/// unregister a class
 		void RemoveClass(const char *ClassName);
-		/// Unregister all classes
+		/// unregister all classes
 		void Clear();
 
-		/// Return a function corresponding to the class name
+		/// return a function corresponding to the class name
 		virtual TdOnObjCreate NameToClass(const char *ClassName);
 		/// Create an object from a filter
 		/** \param Reader  a filter
@@ -580,14 +585,20 @@ namespace CoreArray
 		virtual CdObjRef* ToObj(CdReader &Reader, TdInit OnInit,
 			void *Data, bool Silent);
 
-		const _ClassStruct &ClassStruct(const char *ClassName) const;
-		COREARRAY_INLINE const std::map<const char *, _ClassStruct, _strCmp> &
-			ClassMap() const { return fClassMap; }
+		/// return class structure given by the class name
+		const TClassStruct &ClassStruct(const char *ClassName) const;
 
-		void ClassList(vector<string> &Key, vector<string> &Desp);
+		/// class mapping object
+		COREARRAY_INLINE const TClassMap &ClassMap() const { return fClassMap; }
+
+		/// get a list of class description
+		void GetClassDesp(vector<string> &Key, vector<string> &Desp);
 
 	protected:
-		std::map<const char *, _ClassStruct, _strCmp> fClassMap;
+		/// a map from a class name to class structure
+		TClassMap fClassMap;
+		/// a list of class structure
+		std::vector<TClassMap::iterator> fClassList;
 	};
 
 

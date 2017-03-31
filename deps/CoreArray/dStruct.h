@@ -8,7 +8,7 @@
 //
 // dStruct.h: Data container - array, matrix, etc
 //
-// Copyright (C) 2007-2016    Xiuwen Zheng
+// Copyright (C) 2007-2017    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -29,7 +29,7 @@
  *	\file     dStruct.h
  *	\author   Xiuwen Zheng [zhengx@u.washington.edu]
  *	\version  1.0
- *	\date     2007 - 2016
+ *	\date     2007 - 2017
  *	\brief    Data container - array, matrix, etc
  *	\details
 **/
@@ -217,35 +217,35 @@ namespace CoreArray
 		virtual CdIterator Iterator(const C_Int32 DimIndex[]) = 0;
 
 		/// read array-oriented data
-		/** \param Start       the starting positions (from ZERO), it should not be NULL
-		 *  \param Length      the lengths of each dimension, it should not be NULL
+		/** \param Start       the starting positions (from ZERO), it could be NULL
+		 *  \param Length      the lengths of each dimension, it could be NULL
 		 *  \param OutBuffer   the pointer to the output buffer
 		 *  \param OutSV       data type of output buffer
 		**/
-		virtual void ReadData(const C_Int32 *Start, const C_Int32 *Length,
+		virtual void *ReadData(const C_Int32 *Start, const C_Int32 *Length,
 			void *OutBuffer, C_SVType OutSV);
 
 		/// read array-oriented data from the selection
-		/** \param Start       the starting positions (from ZERO), it should not be NULL
-		 *  \param Length      the lengths of each dimension, it should not be NULL
-		 *  \param Selection   the array of selection
+		/** \param Start       the starting positions (from ZERO), it could be NULL
+		 *  \param Length      the lengths of each dimension, it could be NULL
+		 *  \param Selection   the array of selection, it could be NULL
 		 *  \param OutBuffer   the pointer to the output buffer
 		 *  \param OutSV       data type of output buffer
 		**/
-		virtual void ReadDataEx(const C_Int32 *Start, const C_Int32 *Length,
+		virtual void *ReadDataEx(const C_Int32 *Start, const C_Int32 *Length,
 			const C_BOOL *const Selection[], void *OutBuffer, C_SVType OutSV);
 
 		/// write array-oriented data
-		/** \param Start       the starting positions (from ZERO), it should not be NULL
-		 *  \param Length      the lengths of each dimension, it should not be NULL
+		/** \param Start       the starting positions (from ZERO), it could be NULL
+		 *  \param Length      the lengths of each dimension, it could be NULL
 		 *  \param InBuffer    the pointer to the input buffer
 		 *  \param InSV        data type of input buffer
 		**/
-		virtual void WriteData(const C_Int32 *Start, const C_Int32 *Length,
+		virtual const void *WriteData(const C_Int32 *Start, const C_Int32 *Length,
 			const void *InBuffer, C_SVType InSV);
 
 		/// append new data
-		virtual void Append(void const* Buffer, ssize_t Cnt, C_SVType InSV) = 0;
+		virtual const void *Append(const void *Buffer, ssize_t Cnt, C_SVType InSV) = 0;
 
 		/// append new data from an iterator
 		virtual void AppendIter(CdIterator &I, C_Int64 Count);
@@ -293,7 +293,7 @@ namespace CoreArray
 
 	template<typename TYPE, typename TARRAY, typename F_ITER, typename F_PROC>
 	COREARRAY_DLL_DEFAULT
-	void ArrayRIterRect(const C_Int32 *Start, const C_Int32 *Length,
+	TYPE *ArrayRIterRect(const C_Int32 *Start, const C_Int32 *Length,
 		int DimCnt, TARRAY &Obj, TYPE *Buffer, F_ITER SetI, F_PROC Proc)
 	{
 		if ((Start != NULL) && (Length != NULL))
@@ -325,16 +325,19 @@ namespace CoreArray
 			}
 		} else {
 			CdIterator I = Obj.IterBegin();
-			Proc(I, Buffer, Obj.TotalCount());
+			Buffer = Proc(I, Buffer, Obj.TotalCount());
 		}
+		return Buffer;
 	}
 
 	template<typename TYPE, typename TARRAY, typename F_ITER, typename F_PROC>
 	COREARRAY_DLL_DEFAULT
-	void ArrayRIterRectEx(const C_Int32 Start[], const C_Int32 Length[],
+	TYPE *ArrayRIterRectEx(const C_Int32 Start[], const C_Int32 Length[],
 		const C_BOOL *const Sel[], int DimCnt, TARRAY &Obj, TYPE *Buffer,
 		F_ITER SetI, F_PROC Proc)
 	{
+		// require Start and Length
+
 		CdAbstractArray::TArrayDim DFor, DForLen;
 		C_Int32 *ForP = &DFor[0], *ForLenP = &DForLen[0];
 		C_Int32 ForI = 0, ForEnd = DimCnt-1;
@@ -366,11 +369,13 @@ namespace CoreArray
 			if (ForI >= 0)
 				{ ++(*ForP); --(*ForLenP); }
 		}
+
+		return Buffer;
 	}
 
 	template<typename TYPE, typename TARRAY, typename F_ITER, typename F_PROC>
 	COREARRAY_DLL_DEFAULT
-	void ArrayWIterRect(const C_Int32 *Start, const C_Int32 *Length,
+	const TYPE *ArrayWIterRect(const C_Int32 *Start, const C_Int32 *Length,
 		int DimCnt, TARRAY &Obj, const TYPE *Buffer, F_ITER SetI, F_PROC Proc)
 	{
 		if ((Start != NULL) && (Length != NULL))
@@ -402,8 +407,9 @@ namespace CoreArray
 			}
 		} else {
 			CdIterator I = Obj.IterBegin();
-			Proc(I, Buffer, Obj.TotalCount());
+			Buffer = Proc(I, Buffer, Obj.TotalCount());
 		}
+		return Buffer;
 	}
 
 
@@ -453,7 +459,7 @@ namespace CoreArray
 		virtual void SetPackedMode(const char *Mode);
 
 		/// append new data
-		virtual void Append(void const* Buffer, ssize_t Cnt, C_SVType InSV);
+		virtual const void *Append(const void *Buffer, ssize_t Cnt, C_SVType InSV);
 
 		/// append new data from an iterator
 		virtual void AppendIter(CdIterator &I, C_Int64 Count);
@@ -517,6 +523,8 @@ namespace CoreArray
 
 		/// update info if needed
 		void UpdateInfo(CdBufStream *Sender);
+		/// update info with extended proc, called in UpdateInfo
+		virtual void UpdateInfoExt(CdBufStream *Sender);
 
 		/// set new size of element
 		void SetElmSize(ssize_t NewSize);
@@ -536,8 +544,6 @@ namespace CoreArray
 		void _SetDimAuto(int DimIndex);
 		void _SetSmallBuffer();
 		void _SetLargeBuffer();
-
-		void (*_OnFlushEvent)(CdAllocArray *This, CdBufStream *Sender);
 		void _SetFlushEvent();
 
 	private:
@@ -600,235 +606,252 @@ namespace CoreArray
 			return TdTraits<TYPE>::IsPrimitive;
 		}
 
-		virtual void ReadData(const C_Int32 *Start, const C_Int32 *Length,
+		/// read array-oriented data
+		/** \param Start       the starting positions (from ZERO), it could be NULL
+		 *  \param Length      the lengths of each dimension, it could be NULL
+		 *  \param OutBuffer   the pointer to the output buffer
+		 *  \param OutSV       data type of output buffer
+		**/
+		virtual void *ReadData(const C_Int32 *Start, const C_Int32 *Length,
 			void *OutBuffer, C_SVType OutSV)
 		{
+			TArrayDim DStart, DLength;
+			if (!Start)
+			{
+				memset(DStart, 0, sizeof(C_Int32)*this->fDimension.size());
+				Start = DStart;
+			}
+			if (!Length)
+			{
+				this->GetDim(DLength);
+				Length = DLength;
+			}
+
 			_CheckRect(Start, Length);
 			switch (OutSV)
 			{
 				case svInt8:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(C_Int8*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int8>::Read);
-					break;
 				case svUInt8:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(C_UInt8*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt8>::Read);
-					break;
 				case svInt16:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(C_Int16*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int16>::Read);
-					break;
 				case svUInt16:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(C_UInt16*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt16>::Read);
-					break;
 				case svInt32:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(C_Int32*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int32>::Read);
-					break;
 				case svUInt32:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(C_UInt32*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt32>::Read);
-					break;
 				case svInt64:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(C_Int64*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int64>::Read);
-					break;
 				case svUInt64:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(C_UInt64*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt64>::Read);
-					break;
 				case svFloat32:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(C_Float32*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Float32>::Read);
-					break;
 				case svFloat64:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(C_Float64*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Float64>::Read);
-					break;
 				case svStrUTF8:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(UTF8String*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, UTF8String>::Read);
-					break;
 				case svStrUTF16:
-					ArrayRIterRect(Start, Length, fDimension.size(), *this,
+					return ArrayRIterRect(Start, Length, fDimension.size(), *this,
 						(UTF16String*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, UTF16String>::Read);
-					break;
 				default:
-					CdAllocArray::ReadData(Start, Length, OutBuffer, OutSV);
+					return CdAllocArray::ReadData(Start, Length, OutBuffer, OutSV);
 			}
 		}
 
-		virtual void ReadDataEx(const C_Int32 *Start, const C_Int32 *Length,
+		/// read array-oriented data from the selection
+		/** \param Start       the starting positions (from ZERO), it could be NULL
+		 *  \param Length      the lengths of each dimension, it could be NULL
+		 *  \param Selection   the array of selection, it could be NULL
+		 *  \param OutBuffer   the pointer to the output buffer
+		 *  \param OutSV       data type of output buffer
+		**/
+		virtual void *ReadDataEx(const C_Int32 *Start, const C_Int32 *Length,
 			const C_BOOL *const Selection[], void *OutBuffer, C_SVType OutSV)
 		{
 			if (Selection == NULL)
+				return ReadData(Start, Length, OutBuffer, OutSV);
+
+			TArrayDim DStart, DLength;
+			if (!Start)
 			{
-				ReadData(Start, Length, OutBuffer, OutSV);
-				return;
+				memset(DStart, 0, sizeof(C_Int32)*this->fDimension.size());
+				Start = DStart;
 			}
+			if (!Length)
+			{
+				this->GetDim(DLength);
+				Length = DLength;
+			}
+
 			_CheckRect(Start, Length);
 			switch (OutSV)
 			{
 				case svInt8:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(C_Int8*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int8>::ReadEx);
-					break;
 				case svUInt8:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(C_UInt8*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt8>::ReadEx);
-					break;
 				case svInt16:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(C_Int16*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int16>::ReadEx);
-					break;
 				case svUInt16:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(C_UInt16*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt16>::ReadEx);
-					break;
 				case svInt32:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(C_Int32*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int32>::ReadEx);
-					break;
 				case svUInt32:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(C_UInt32*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt32>::ReadEx);
-					break;
 				case svInt64:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(C_Int64*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int64>::ReadEx);
-					break;
 				case svUInt64:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(C_UInt64*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt64>::ReadEx);
-					break;
 				case svFloat32:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(C_Float32*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Float32>::ReadEx);
-					break;
 				case svFloat64:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(C_Float64*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, C_Float64>::ReadEx);
-					break;
 				case svStrUTF8:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(UTF8String*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, UTF8String>::ReadEx);
-					break;
 				case svStrUTF16:
-					ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
+					return ArrayRIterRectEx(Start, Length, Selection, fDimension.size(), *this,
 						(UTF16String*)OutBuffer, IIndex, ALLOC_FUNC<TYPE, UTF16String>::ReadEx);
-					break;
 				default:
-					CdAllocArray::ReadDataEx(Start, Length, Selection, OutBuffer, OutSV);
+					return CdAllocArray::ReadDataEx(Start, Length, Selection, OutBuffer, OutSV);
 			}
 		}
 
-		virtual void WriteData(const C_Int32 *Start, const C_Int32 *Length,
+		/// write array-oriented data
+		/** \param Start       the starting positions (from ZERO), it could be NULL
+		 *  \param Length      the lengths of each dimension, it could be NULL
+		 *  \param InBuffer    the pointer to the input buffer
+		 *  \param InSV        data type of input buffer
+		**/
+		virtual const void *WriteData(const C_Int32 *Start, const C_Int32 *Length,
 			const void *InBuffer, C_SVType InSV)
 		{
+			TArrayDim DStart, DLength;
+			if (!Start)
+			{
+				memset(DStart, 0, sizeof(C_Int32)*this->fDimension.size());
+				Start = DStart;
+			}
+			if (!Length)
+			{
+				this->GetDim(DLength);
+				Length = DLength;
+			}
+
 			_CheckRect(Start, Length);
 			switch (InSV)
 			{
 				case svInt8:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const C_Int8*)InBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int8>::Write);
-					break;
 				case svUInt8:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const C_UInt8*)InBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt8>::Write);
-					break;
 				case svInt16:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const C_Int16*)InBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int16>::Write);
-					break;
 				case svUInt16:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const C_UInt16*)InBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt16>::Write);
-					break;
 				case svInt32:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const C_Int32*)InBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int32>::Write);
-					break;
 				case svUInt32:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const C_UInt32*)InBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt32>::Write);
-					break;
 				case svInt64:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const C_Int64*)InBuffer, IIndex, ALLOC_FUNC<TYPE, C_Int64>::Write);
-					break;
 				case svUInt64:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const C_UInt64*)InBuffer, IIndex, ALLOC_FUNC<TYPE, C_UInt64>::Write);
-					break;
 				case svFloat32:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const C_Float32*)InBuffer, IIndex, ALLOC_FUNC<TYPE, C_Float32>::Write);
-					break;
 				case svFloat64:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const C_Float64*)InBuffer, IIndex, ALLOC_FUNC<TYPE, C_Float64>::Write);
-					break;
 				case svStrUTF8:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const UTF8String*)InBuffer, IIndex, ALLOC_FUNC<TYPE, UTF8String>::Write);
-					break;
 				case svStrUTF16:
-					ArrayWIterRect(Start, Length, DimCnt(), *this,
+					return ArrayWIterRect(Start, Length, DimCnt(), *this,
 						(const UTF16String*)InBuffer, IIndex, ALLOC_FUNC<TYPE, UTF16String>::Write);
-					break;
 				default:
-					CdAllocArray::WriteData(Start, Length, InBuffer, InSV);
+					return CdAllocArray::WriteData(Start, Length, InBuffer, InSV);
 			}
 		}
 
 
 		/// append new data
-		virtual void Append(const void *Buffer, ssize_t Cnt, C_SVType InSV)
+		virtual const void *Append(const void *Buffer, ssize_t Cnt, C_SVType InSV)
 		{
-			if (Cnt <= 0) return;
+			if (Cnt <= 0) return Buffer;
 			_SetLargeBuffer();
 			CdIterator I = IterEnd();
 			switch (InSV)
 			{
 				case svInt8:
-					ALLOC_FUNC<TYPE, C_Int8>::Write(I, (const C_Int8*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, C_Int8>::Write(I, (const C_Int8*)Buffer, Cnt);
 					break;
 				case svUInt8:
-					ALLOC_FUNC<TYPE, C_UInt8>::Write(I, (const C_UInt8*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, C_UInt8>::Write(I, (const C_UInt8*)Buffer, Cnt);
 					break;
 				case svInt16:
-					ALLOC_FUNC<TYPE, C_Int16>::Write(I, (const C_Int16*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, C_Int16>::Write(I, (const C_Int16*)Buffer, Cnt);
 					break;
 				case svUInt16:
-					ALLOC_FUNC<TYPE, C_UInt16>::Write(I, (const C_UInt16*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, C_UInt16>::Write(I, (const C_UInt16*)Buffer, Cnt);
 					break;
 				case svInt32:
-					ALLOC_FUNC<TYPE, C_Int32>::Write(I, (const C_Int32*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, C_Int32>::Write(I, (const C_Int32*)Buffer, Cnt);
 					break;
 				case svUInt32:
-					ALLOC_FUNC<TYPE, C_UInt32>::Write(I, (const C_UInt32*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, C_UInt32>::Write(I, (const C_UInt32*)Buffer, Cnt);
 					break;
 				case svInt64:
-					ALLOC_FUNC<TYPE, C_Int64>::Write(I, (const C_Int64*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, C_Int64>::Write(I, (const C_Int64*)Buffer, Cnt);
 					break;
 				case svUInt64:
-					ALLOC_FUNC<TYPE, C_UInt64>::Write(I, (const C_UInt64*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, C_UInt64>::Write(I, (const C_UInt64*)Buffer, Cnt);
 					break;
 				case svFloat32:
-					ALLOC_FUNC<TYPE, C_Float32>::Write(I, (const C_Float32*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, C_Float32>::Write(I, (const C_Float32*)Buffer, Cnt);
 					break;
 				case svFloat64:
-					ALLOC_FUNC<TYPE, C_Float64>::Write(I, (const C_Float64*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, C_Float64>::Write(I, (const C_Float64*)Buffer, Cnt);
 					break;
 				case svStrUTF8:
-					ALLOC_FUNC<TYPE, UTF8String>::Write(I, (const UTF8String*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, UTF8String>::Write(I, (const UTF8String*)Buffer, Cnt);
 					break;
 				case svStrUTF16:
-					ALLOC_FUNC<TYPE, UTF16String>::Write(I, (const UTF16String*)Buffer, Cnt);
+					Buffer = ALLOC_FUNC<TYPE, UTF16String>::Write(I, (const UTF16String*)Buffer, Cnt);
 					break;
 				default:
-					CdAllocArray::Append(Buffer, Cnt, InSV);
+					Buffer = CdAllocArray::Append(Buffer, Cnt, InSV);
 			}
 
 			// check
@@ -840,6 +863,8 @@ namespace CoreArray
 				_SetFlushEvent();
 				fNeedUpdate = true;
 			}
+
+			return Buffer;
 		}
 
 	protected:
@@ -1074,7 +1099,9 @@ namespace CoreArray
 	{
 	public:
 
+		/// constructor
 		CdArrayRead();
+		/// destructor
 		~CdArrayRead();
 
 		void Init(CdAbstractArray &vObj, int vMargin, C_SVType vSVType,

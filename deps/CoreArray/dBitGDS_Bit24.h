@@ -8,7 +8,7 @@
 //
 // dBitGDS_Bit24.h: Bit operators and classes of GDS format for Bit24/SBit24
 //
-// Copyright (C) 2007-2016    Xiuwen Zheng
+// Copyright (C) 2007-2017    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -29,7 +29,7 @@
  *	\file     dBitGDS_Bit24.h
  *	\author   Xiuwen Zheng [zhengx@u.washington.edu]
  *	\version  1.0
- *	\date     2007 - 2016
+ *	\date     2007 - 2017
  *	\brief    Bit operators and classes of GDS format for Bit24/SBit24
  *	\details
 **/
@@ -42,9 +42,8 @@ namespace CoreArray
 	// =====================================================================
 	// 24-bit unsigned integer functions for allocator
 
-	template<typename MEM_TYPE, bool MEM_TYPE_IS_NUMERIC>
-		struct COREARRAY_DLL_DEFAULT
-		ALLOC_FUNC< BIT24, MEM_TYPE, MEM_TYPE_IS_NUMERIC >
+	template<typename MEM_TYPE>
+		struct COREARRAY_DLL_DEFAULT ALLOC_FUNC<BIT24, MEM_TYPE>
 	{
 		/// read an array from CdAllocator
 		static MEM_TYPE *Read(CdIterator &I, MEM_TYPE *Buffer, ssize_t n)
@@ -74,7 +73,7 @@ namespace CoreArray
 			return Buffer;
 		}
 
-		/// read an array from CdAllocator
+		/// read an array from CdAllocator with selection
 		static MEM_TYPE *ReadEx(CdIterator &I, MEM_TYPE *Buffer, ssize_t n,
 			const C_BOOL sel[])
 		{
@@ -138,9 +137,8 @@ namespace CoreArray
 	// =====================================================================
 	// 24-bit signed integer functions for allocator
 
-	template<typename MEM_TYPE, bool MEM_TYPE_IS_NUMERIC>
-		struct COREARRAY_DLL_DEFAULT
-		ALLOC_FUNC< SBIT24, MEM_TYPE, MEM_TYPE_IS_NUMERIC >
+	template<typename MEM_TYPE>
+		struct COREARRAY_DLL_DEFAULT ALLOC_FUNC<SBIT24, MEM_TYPE>
 	{
 		/// read an array from CdAllocator
 		static MEM_TYPE *Read(CdIterator &I, MEM_TYPE *Buffer, ssize_t n)
@@ -171,7 +169,7 @@ namespace CoreArray
 			return Buffer;
 		}
 
-		/// read an array from CdAllocator
+		/// read an array from CdAllocator with selection
 		static MEM_TYPE *ReadEx(CdIterator &I, MEM_TYPE *Buffer, ssize_t n,
 			const C_BOOL sel[])
 		{

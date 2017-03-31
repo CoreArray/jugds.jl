@@ -8,7 +8,7 @@
 //
 // dSerial.cpp: Serialization between class objects and stream data
 //
-// Copyright (C) 2007-2016    Xiuwen Zheng
+// Copyright (C) 2007-2017    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -94,10 +94,11 @@ static char PropNameMapChar[64] = {
 
 
 static const char *ERR_DUP_CLASS =
-	"Duplicate Class Stream Name '%s'!";
+	"Duplicate class name of stream '%s'!";
 static const char *ERR_INV_CLASS_NAME =
-	"No class name '%s' in the GDS system.";
-
+	"No class '%s' in the GDS system.";
+static const char *ERR_INV_VERSION =
+	"Data version (v%d.%d) of '%s' is higher than what the object supports.";
 
 
 // =====================================================================
@@ -1181,7 +1182,7 @@ CdObjClassMgr::CdObjClassMgr(): CdAbstractManager() {}
 CdObjClassMgr::~CdObjClassMgr() {}
 
 
-bool CdObjClassMgr::_strCmp::operator()(const char* s1, const char* s2) const
+bool CdObjClassMgr::TStrCmp::operator()(const char* s1, const char* s2) const
 {
 	if ((s1 == NULL) && (s2 != NULL))
 		return true;
@@ -1194,14 +1195,16 @@ bool CdObjClassMgr::_strCmp::operator()(const char* s1, const char* s2) const
 void CdObjClassMgr::AddClass(const char *ClassName,
 	TdOnObjCreate OnCreate, ClassType vCType, const char *Desp)
 {
-	map<const char *, _ClassStruct, _strCmp>::const_iterator it;
+	TClassMap::const_iterator it;
 
 	it = fClassMap.find(ClassName);
 	if (it == fClassMap.end())
 	{
-		_ClassStruct p;
+		TClassStruct p;
 		p.OnCreate = OnCreate; p.Desp = Desp; p.CType = vCType;
-		fClassMap.insert(pair<const char *, _ClassStruct>(ClassName, p));
+		TClassMap::iterator i = fClassMap.insert(fClassMap.begin(),
+			pair<const char *, TClassStruct>(ClassName, p));
+		fClassList.push_back(i);
 	} else
 		throw ErrObject(ERR_DUP_CLASS, ClassName);
 }
@@ -1214,12 +1217,13 @@ void CdObjClassMgr::RemoveClass(const char * const ClassName)
 void CdObjClassMgr::Clear()
 {
 	fClassMap.clear();
+	fClassList.clear();
 }
 
 CdObjClassMgr::TdOnObjCreate CdObjClassMgr::NameToClass(
 	const char * ClassName)
 {
-	map<const char *, _ClassStruct, _strCmp>::const_iterator it;
+	map<const char *, TClassStruct, TStrCmp>::const_iterator it;
 	it = fClassMap.find(ClassName);
 	if (it != fClassMap.end())
 		return it->second.OnCreate;
@@ -1238,7 +1242,7 @@ CdObjRef* CdObjClassMgr::ToObj(CdReader &Reader, TdInit OnInit,
 	Reader._BeginNameSpace();
 	try {
 		Version = Reader.Storage().R8b();
-		Version |= Reader.Storage().R8b() << 8;
+		Version |= ((TdVersion)Reader.Storage().R8b()) << 8;
 		Name = Reader.ReadClassName();
 		OnCreate = NameToClass(Name.c_str());
 
@@ -1246,6 +1250,13 @@ CdObjRef* CdObjClassMgr::ToObj(CdReader &Reader, TdInit OnInit,
 		{
 			Obj = OnCreate();
 			if (OnInit) OnInit(*this, Obj, Data);
+			// check version number
+			if (Version > Obj->dVersion())
+			{
+				throw ErrSerial(ERR_INV_VERSION, Version >> 8, Version & 0xFF,
+					Name.c_str());
+			}
+			// load
 			Reader._InitNameSpace();
 			_INTERNAL::CdObject_LoadStruct(*Obj, Reader, Version);
 		} else
@@ -1265,10 +1276,10 @@ CdObjRef* CdObjClassMgr::ToObj(CdReader &Reader, TdInit OnInit,
 	return Obj;
 }
 
-const CdObjClassMgr::_ClassStruct &CdObjClassMgr::ClassStruct(
+const CdObjClassMgr::TClassStruct &CdObjClassMgr::ClassStruct(
 	const char *ClassName) const
 {
-	map<const char *, _ClassStruct, _strCmp>::const_iterator it;
+	map<const char *, TClassStruct, TStrCmp>::const_iterator it;
 	it = fClassMap.find(ClassName);
 	if (it != fClassMap.end())
 		return it->second;
@@ -1276,16 +1287,15 @@ const CdObjClassMgr::_ClassStruct &CdObjClassMgr::ClassStruct(
 		throw ErrSerial(ERR_INV_CLASS_NAME, ClassName);
 }
 
-void CdObjClassMgr::ClassList(vector<string> &Key, vector<string> &Desp)
+void CdObjClassMgr::GetClassDesp(vector<string> &Key, vector<string> &Desp)
 {
 	Key.clear();
 	Desp.clear();
-
-	map<const char *, _ClassStruct, _strCmp>::iterator it;
-	for (it=fClassMap.begin(); it != fClassMap.end(); it++)
+	std::vector<TClassMap::iterator>::iterator p;
+	for (p=fClassList.begin(); p != fClassList.end(); p++)
 	{
-		Key.push_back(it->first);
-		Desp.push_back(it->second.Desp);
+		Key.push_back((*p)->first);
+		Desp.push_back((*p)->second.Desp);
 	}
 }
 

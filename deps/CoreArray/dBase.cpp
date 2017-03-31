@@ -8,7 +8,7 @@
 //
 // dBase.cpp: Fundamental classes for CoreArray library
 //
-// Copyright (C) 2007-2016    Xiuwen Zheng
+// Copyright (C) 2007-2017    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -462,16 +462,31 @@ CdStream& CdStream::operator= (CdStream& m)
 
 void CdStream::CopyFrom(CdStream &Source, SIZE64 Pos, SIZE64 Count)
 {
-	C_UInt8 Buffer[COREARRAY_STREAM_BUFFER];
 	Source.SetPosition(Pos);
 	if (Count < 0)
 		Count = Source.GetSize() - Source.Position();
-	for (; Count > 0; )
+
+	if (Count >= 8388608)  // 8M
 	{
-		ssize_t N = (Count <= (ssize_t)sizeof(Buffer)) ? Count : sizeof(Buffer);
-		Source.ReadData(Buffer, N);
-		WriteData((void*)Buffer, N);
-		Count -= N;
+		vector<C_UInt8> Buffer(COREARRAY_LARGE_STREAM_BUFFER);
+		void *pBuffer = &Buffer[0];
+		for (; Count > 0; )
+		{
+			ssize_t N = (Count <= (ssize_t)COREARRAY_LARGE_STREAM_BUFFER) ?
+				Count : COREARRAY_LARGE_STREAM_BUFFER;
+			Source.ReadData(pBuffer, N);
+			WriteData(pBuffer, N);
+			Count -= N;
+		}
+	} else {
+		C_UInt8 Buffer[COREARRAY_STREAM_BUFFER];
+		for (; Count > 0; )
+		{
+			ssize_t N = (Count <= (ssize_t)sizeof(Buffer)) ? Count : sizeof(Buffer);
+			Source.ReadData(Buffer, N);
+			WriteData((void*)Buffer, N);
+			Count -= N;
+		}
 	}
 }
 
@@ -584,8 +599,22 @@ void CdBufStream::ReadData(void *Buf, ssize_t Count)
 
 C_UInt8 CdBufStream::R8b()
 {
-	C_UInt8 rv;
-	ReadData(&rv, sizeof(rv));
+	// Check in Range
+	if ((_Position < _BufStart) || (_Position >= _BufEnd))
+	{
+		// save to Buffer
+		FlushBuffer();
+		// make it in range
+		_BufStart = (_Position >> BufStreamAlign) << BufStreamAlign;
+		_Stream->SetPosition(_BufStart);
+		_BufEnd = _BufStart + _Stream->Read(_Buffer, _BufSize);
+		// check
+		if (_Position >= _BufEnd)
+			throw ErrStream(ERR_STREAM_READ);
+	}
+
+	C_UInt8 rv = _Buffer[_Position - _BufStart];
+	_Position ++;
 	return rv;
 }
 
@@ -765,4 +794,90 @@ void CdBufStream::PopPipe()
 		}
 		_BufEnd = _BufStart = _Position = 0;
 	}
+}
+
+
+
+// =====================================================================
+// Indexing object for random access
+// =====================================================================
+
+CdStreamIndex::CdStreamIndex()
+{
+	fCount = 0;
+	fScale = fInvScale = 0;
+	fCurIndex = fNextHit = 0;
+	fNextHitIndex = 0;
+	fHasInit = true;
+}
+
+void CdStreamIndex::Reset(C_Int64 count)
+{
+	if (count < 0) count = 0;
+	fCount = count;
+	fHasInit = false;
+}
+
+void CdStreamIndex::Initialize()
+{
+	if (!fHasInit) _Init();
+}
+
+void CdStreamIndex::_Init()
+{
+	fList.clear();
+	fCurIndex = 0;
+	if (fCount > 0)
+	{
+		int n = IndexSize;
+		if (n > fCount) n = fCount;
+		fScale = (double)n / fCount;
+		fInvScale = (double)fCount / n;
+		fNextHit = (C_Int64)fInvScale;
+		fNextHitIndex = 1;
+		fList.resize(n, TPair(-1, 0));
+		fList[0] = TPair(0, 0);
+	} else {
+		fScale = fInvScale = 1;
+		fNextHit = 0;
+		fNextHitIndex = 0;
+	}
+	fHasInit = true;
+}
+
+void CdStreamIndex::_Hit(SIZE64 stream_pos)
+{
+	if (fNextHitIndex < fList.size())
+	{
+		TPair &p = fList[fNextHitIndex++];
+		p.Index = fCurIndex;
+		p.StreamPos = stream_pos;
+		fNextHit = (C_Int64)(fInvScale * fNextHitIndex);
+	} else {
+		fNextHit ++;
+	}
+}
+
+void CdStreamIndex::Set(C_Int64 index, C_Int64 &close_index, SIZE64 &stream_pos)
+{
+	if (!fHasInit) _Init();
+	if ((0 <= index) && (index < fCount))
+	{
+		ssize_t i = (ssize_t)(fScale * index);
+		for (; i > 0; i--)
+		{
+			C_Int64 p = fList[i].Index;
+			if ((p >= 0) && (p <= index)) break;
+		}
+
+		TPair &p = fList[i];
+		if (!((p.Index < close_index) && (close_index < index)))
+		{
+			fCurIndex = close_index = p.Index;
+			stream_pos = p.StreamPos;
+		} else {
+			fCurIndex = close_index;
+		}
+	} else
+		throw ErrObject("%s: index is out of range", __func__);
 }
