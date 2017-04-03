@@ -299,17 +299,15 @@ end
 
 function size_fmt(size::Int64)
 	if size >= 1000^4
-		return @sprintf("%.1f TB", size/(1000.0^4))
+		return @sprintf("%.1fT", size/(1000.0^4))
 	elseif size >= 1000^3
-		return @sprintf("%.1f GB", size/(1000.0^3))
+		return @sprintf("%.1fG", size/(1000.0^3))
 	elseif size >= 1000^2
-		return @sprintf("%.1f MB", size/(1000.0^2))
+		return @sprintf("%.1fM", size/(1000.0^2))
 	elseif size >= 1000
-		return @sprintf("%.1f KB", size/1000.0)
-	elseif size > 1
-		return @sprintf("%d bytes", size)
+		return @sprintf("%.1fK", size/1000.0)
 	else
-		return @sprintf("%d byte", size)
+		return @sprintf("%dB", size)
 	end
 end
 
@@ -362,8 +360,8 @@ function enum_node(io::IO, obj::type_gdsnode, space::String, level::Int,
 	# show compression
 	if d.encoder != ""
 		s = s * " " * d.encoder
-		if isfinite(d.compression_ratio)
-			s = s * @sprintf("(%0.2f%%)", 100*d.compression_ratio)
+		if isfinite(d.cratio)
+			s = s * @sprintf("(%0.2f%%)", 100*d.cratio)
 		end
 	end
 
@@ -383,10 +381,12 @@ function enum_node(io::IO, obj::type_gdsnode, space::String, level::Int,
 	println(io)
 
 	if expand
-		for nm = ls_gdsn(obj)
-			enum_node(io, index_gdsn(obj, nm),
-				ifelse(level==1, "|--", "|  ") * space,
-				level+1, all, expand, false)
+		if d.gds_type == "Folder"
+			for nm = ls_gdsn(obj)
+				enum_node(io, index_gdsn(obj, nm),
+					ifelse(level==1, "|--", "|  ") * space,
+					level+1, all, expand, false)
+			end
 		end
 	end
 
@@ -400,7 +400,7 @@ function show(io::IO, file::type_gdsfile, all=false)
 	print_with_color(:black, io, " ", file.filename)
 	print_with_color(:white, io, " (", size_fmt(size), ")")
 	println(io)
-	# show(io, root_gdsn(file), all)
+	show(io, root_gdsn(file), all)
 end
 
 
