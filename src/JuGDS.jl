@@ -181,6 +181,13 @@ function root_gdsn(file::type_gdsfile)
 end
 
 
+# Get the name(s) of child node
+function ls_gdsn(obj::type_gdsnode, inc_hidden::Bool=false)
+	return ccall((:gdsnListName, LibCoreArray), Vector{String},
+		(Cint, Ptr{Void}, Bool), obj.id, obj.ptr, inc_hidden)
+end
+
+
 # Get the name of GDS node
 function name_gdsn(obj::type_gdsnode, fullname::Bool=false)
 	ss = String[]
@@ -198,17 +205,6 @@ function rename_gdsn(obj::type_gdsnode, newname::String)
 		(Cint, Ptr{Void}, Cstring), obj.id, obj.ptr, newname)
 	error_check()
 	return obj
-end
-
-
-# Get the name(s) of child node
-function ls_gdsn(obj::type_gdsnode, has_hidden::Bool=false)
-	ss = String[]
-	ccall((:GDS_Node_ListName, LibCoreArray), Void,
-		(Cint, Ptr{Void}, Bool, Ptr{Void}, Ptr{Void}),
-		obj.id, obj.ptr, has_hidden, c_text_push, pointer_from_objref(ss))
-	error_check()
-	return ss
 end
 
 

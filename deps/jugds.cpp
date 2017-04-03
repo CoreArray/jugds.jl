@@ -389,19 +389,15 @@ JL_DLLEXPORT int gdsRoot(int file_id, PdGDSObj *PObj)
 // ----------------------------------------------------------------------------
 // File Structure Operations
 // ----------------------------------------------------------------------------
-/*
-/// Enumerate the names of its child nodes
-JL_DLLEXPORT PyObject* gdsnListName(PyObject *self, PyObject *args)
-{
-	int nidx;
-	Py_ssize_t ptr_int;
-	int inc_hidden;
-	if (!PyArg_ParseTuple(args, "in" BSTR, &nidx, &ptr_int, &inc_hidden))
-		return NULL;
 
+/// Enumerate the names of its child nodes
+JL_DLLEXPORT jl_array_t* gdsnListName(int node_id, PdGDSObj node,
+	C_BOOL has_hidden)
+{
+	jl_array_t *rv_ans;
 	COREARRAY_TRY
 
-		CdGDSObj *Obj = get_obj(nidx, ptr_int);
+		CdGDSObj *Obj = get_obj(node_id, node);
 		CdGDSAbsFolder *Dir = dynamic_cast<CdGDSAbsFolder*>(Obj);
 		if (Dir)
 		{
@@ -411,7 +407,7 @@ JL_DLLEXPORT PyObject* gdsnListName(PyObject *self, PyObject *args)
 				CdGDSObj *Obj = Dir->ObjItemEx(i);
 				if (Obj)
 				{
-					if (inc_hidden)
+					if (has_hidden)
 					{
 						List.push_back(RawText(Obj->Name()));
 					} else {
@@ -424,23 +420,24 @@ JL_DLLEXPORT PyObject* gdsnListName(PyObject *self, PyObject *args)
 				}
 			}
 
-			PyObject *rv_ans = PyList_New(List.size());
+			jl_value_t *array_type = jl_apply_array_type(jl_string_type, 1);
+			rv_ans = jl_alloc_array_1d(array_type, List.size());
+			void **data = (void**)jl_array_data(rv_ans);
 			for (size_t i=0; i < List.size(); i++)
 			{
-				PyObject *x = PYSTR_SET2(List[i].c_str(), List[i].size());
-				PyList_SetItem(rv_ans, i, x);
+				jl_value_t *s = jl_pchar_to_string(List[i].c_str(), List[i].size());
+				data[i] = s;
+				jl_gc_wb(rv_ans, s);
 			}
-
-			return rv_ans;
-
 		} else {
 			throw ErrGDSObj("It is not a folder.");
 		}
 
-	COREARRAY_CATCH_NONE
+	COREARRAY_CATCH
+	return rv_ans;
 }
 
-
+/*
 /// Get the GDS node with a given path
 JL_DLLEXPORT PyObject* gdsnIndex(PyObject *self, PyObject *args)
 {
