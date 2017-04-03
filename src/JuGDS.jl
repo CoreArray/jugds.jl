@@ -209,13 +209,10 @@ end
 
 
 # Get the name of GDS node
-function name_gdsn(obj::type_gdsnode, fullname::Bool=false)
-	ss = String[]
-	ccall((:GDS_Node_Name, LibCoreArray), Void,
-		(Cint, Ptr{Void}, Bool, Ptr{Void}, Ptr{Void}),
-		obj.id, obj.ptr, fullname, c_text_push, pointer_from_objref(ss))
-	error_check()
-	return ss[1]
+function name_gdsn(obj::type_gdsnode, full::Bool=false)
+	s = ccall((:gdsnName, LibCoreArray), Ptr{Void}, (Cint, Ptr{Void}, Bool),
+		obj.id, obj.ptr, full)
+	return unsafe_pointer_to_objref(s)
 end
 
 
@@ -225,10 +222,6 @@ function rename_gdsn(obj::type_gdsnode, newname::String)
 		(Cint, Ptr{Void}, Cstring), obj.id, obj.ptr, newname)
 	error_check()
 	return obj
-end
-
-function index_gdsn(file::type_gdsfile, path::String, silent::Bool=false)
-	return index_gdsn(root_gdsn(file), path, silent)
 end
 
 

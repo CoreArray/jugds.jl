@@ -463,28 +463,24 @@ JL_DLLEXPORT int gdsnIndex(int node_id, PdGDSObj node, const char *path,
 	return idx;
 }
 
-/*
-/// Get the name of a GDS node
-JL_DLLEXPORT PyObject* gdsnName(PyObject *self, PyObject *args)
-{
-	int nidx;
-	Py_ssize_t ptr_int;
-	int full;
-	if (!PyArg_ParseTuple(args, "in" BSTR, &nidx, &ptr_int, &full))
-		return NULL;
 
+/// Get the name of a GDS node
+JL_DLLEXPORT jl_value_t* gdsnName(int node_id, PdGDSObj node, C_BOOL full)
+{
+	jl_value_t *rv_ans;
 	COREARRAY_TRY
-		CdGDSObj *Obj = get_obj(nidx, ptr_int);
+		CdGDSObj *Obj = get_obj(node_id, node);
 		string nm;
 		if (full)
 			nm = RawText(Obj->FullName());
 		else
 			nm = RawText(Obj->Name());
-		return Py_BuildValue("s", nm.c_str());
-	COREARRAY_CATCH_NONE
+		rv_ans = jl_pchar_to_string(nm.c_str(), nm.size());
+	COREARRAY_CATCH
+	return rv_ans;
 }
 
-
+/*
 /// Get the name of a GDS node
 JL_DLLEXPORT PyObject* gdsnRename(PyObject *self, PyObject *args)
 {
