@@ -71,17 +71,16 @@ type type_gdsnode
 end
 
 # GDS variable information
-immutable type_info_gdsn
+immutable type_infogdsn
 	name::String
 	fullname::String
 	storage::String
 	trait::String
 	gds_type::String
-	is_array::Bool
 	dim::Vector{Int64}
 	encoder::String
-	compression::String
-	compression_ratio::Float64
+	compress::String
+	cratio::Float64
 	size::Int64
 	good::Bool
 	hidden::Bool
@@ -218,10 +217,24 @@ end
 
 # Rename the GDS node
 function rename_gdsn(obj::type_gdsnode, newname::String)
-	ccall((:GDS_Node_Rename, LibCoreArray), Void,
+	ccall((:gdsnRename, LibCoreArray), Void,
 		(Cint, Ptr{Void}, Cstring), obj.id, obj.ptr, newname)
-	error_check()
 	return obj
+end
+
+
+# Get the descritpion of a specified node
+function objdesp_gdsn(obj::type_gdsnode)
+	dm = Int64[]
+	cratio = Ref{Float64}(NaN)
+	size = Ref{Int64}(-1)
+	good = Ref{Bool}(false)
+	hidden = Ref{Bool}(false)
+	s = ccall((:gdsnDesp, LibCoreArray), Vector{String},
+		(Cint, Ptr{Void}, Vector{Int64}, Ref{Float64}, Ref{Int64}, Ref{Bool}, Ref{Bool}),
+		obj.id, obj.ptr, dm, cratio, size, good, hidden)
+	return type_infogdsn(s[1], s[2], s[3], s[4], s[5],
+		dm, s[6], s[7], cratio[], size[], good[], hidden[], s[8])
 end
 
 
@@ -245,26 +258,6 @@ function delete_gdsn(obj::type_gdsnode, force::Bool=false)
 		(Cint, Ptr{Void}, Bool), obj.id, obj.ptr, force)
 	error_check()
 	return nothing
-end
-
-
-# Get the descritpion of a specified node
-function objdesp_gdsn(obj::type_gdsnode)
-	ss = String[]
-	dm = Int64[]
-	cpratio = Ref{Float64}(NaN)
-	size = Ref{Int64}(-1)
-
-	flag = ccall((:GDS_NodeObjDesp, LibCoreArray), Cint,
-		(Cint, Ptr{Void}, Ref{Float64}, Ref{Int64}, Ptr{Void}, Ptr{Void},
-			Ptr{Void}, Ptr{Void}),
-		obj.id, obj.ptr, cpratio, size, c_text_push, pointer_from_objref(ss),
-			c_int64_push, pointer_from_objref(dm))
-	error_check()
-
-	return type_info_gdsn(ss[1], ss[2], ss[3], ss[4], ss[5],
-		(flag & 0x01) != 0, dm, ss[6], ss[7], cpratio[], size[],
-		(flag & 0x02) != 0, (flag & 0x04) != 0, ss[8])
 end
 
 

@@ -394,7 +394,7 @@ JL_DLLEXPORT int gdsRoot(int file_id, PdGDSObj *PObj)
 JL_DLLEXPORT jl_array_t* gdsnListName(int node_id, PdGDSObj node,
 	C_BOOL has_hidden)
 {
-	jl_array_t *rv_ans;
+	jl_array_t *rv_ans = NULL;
 	COREARRAY_TRY
 
 		CdGDSObj *Obj = get_obj(node_id, node);
@@ -467,7 +467,7 @@ JL_DLLEXPORT int gdsnIndex(int node_id, PdGDSObj node, const char *path,
 /// Get the name of a GDS node
 JL_DLLEXPORT jl_value_t* gdsnName(int node_id, PdGDSObj node, C_BOOL full)
 {
-	jl_value_t *rv_ans;
+	jl_value_t *rv_ans = NULL;
 	COREARRAY_TRY
 		CdGDSObj *Obj = get_obj(node_id, node);
 		string nm;
@@ -480,34 +480,25 @@ JL_DLLEXPORT jl_value_t* gdsnName(int node_id, PdGDSObj node, C_BOOL full)
 	return rv_ans;
 }
 
-/*
-/// Get the name of a GDS node
-JL_DLLEXPORT PyObject* gdsnRename(PyObject *self, PyObject *args)
-{
-	int nidx;
-	Py_ssize_t ptr_int;
-	const char *newname;
-	if (!PyArg_ParseTuple(args, "ins", &nidx, &ptr_int, &newname))
-		return NULL;
 
+/// Get the name of a GDS node
+JL_DLLEXPORT void gdsnRename(int node_id, PdGDSObj node, const char *newname)
+{
 	COREARRAY_TRY
-		CdGDSObj *Obj = get_obj(nidx, ptr_int);
+		CdGDSObj *Obj = get_obj(node_id, node);
 		Obj->SetName(UTF16Text(newname));
-	COREARRAY_CATCH_NONE
+	COREARRAY_CATCH
 }
 
 
 /// Get the description of a GDS node
-JL_DLLEXPORT PyObject* gdsnDesp(PyObject *self, PyObject *args)
+JL_DLLEXPORT jl_array_t* gdsnDesp(int node_id, PdGDSObj node,
+	jl_array_t *dim, double *cratio, C_Int64 *size, C_BOOL *good, C_BOOL *hidden)
 {
-	int nidx;
-	Py_ssize_t ptr_int;
-	if (!PyArg_ParseTuple(args, "in", &nidx, &ptr_int))
-		return NULL;
-
+	jl_array_t *rv_ans = NULL;
 	COREARRAY_TRY
 
-		CdGDSObj *Obj = get_obj(nidx, ptr_int);
+		CdGDSObj *Obj = get_obj(node_id, node);
 
 		string nm  = RawText(Obj->Name());
 		string nm2 = RawText(Obj->FullName());
@@ -545,16 +536,19 @@ JL_DLLEXPORT PyObject* gdsnDesp(PyObject *self, PyObject *args)
 		}
 
 		// dim, the dimension of data field
-		PyObject *dim;
 		string encoder, compress;
-		double cpratio = NaN;
 		if (dynamic_cast<CdAbstractArray*>(Obj))
 		{
 			CdAbstractArray *_Obj = (CdAbstractArray*)Obj;
-
-			dim = PyList_New(_Obj->DimCnt());
-			for (int i=0; i < _Obj->DimCnt(); i++)
-				PyList_SetItem(dim, i, PyInt_FromLong(_Obj->GetDLen(i)));
+			int n = _Obj->DimCnt();
+			// work around the mis data in julia (TODO)
+			jl_value_t *v = jl_box_int64(0);
+			JL_GC_PUSH1(&v);
+			for (int i=0; i < n; i++) jl_array_ptr_1d_push(dim, v);
+			JL_GC_POP();
+			C_Int64 *p = (C_Int64*)jl_array_data(dim);
+			for (int i=0; i < n; i++)
+				p[i] = _Obj->GetDLen(n-i-1);
 
 			if (_Obj->PipeInfo())
 			{
@@ -562,43 +556,41 @@ JL_DLLEXPORT PyObject* gdsnDesp(PyObject *self, PyObject *args)
 				compress = _Obj->PipeInfo()->CoderParam();
 				if (_Obj->PipeInfo()->StreamTotalIn() > 0)
 				{
-					cpratio = (double)_Obj->PipeInfo()->StreamTotalOut() /
+					*cratio = (double)_Obj->PipeInfo()->StreamTotalOut() /
 						_Obj->PipeInfo()->StreamTotalIn();
 				}
 			}
-		} else {
-			dim = Py_None; Py_INCREF(dim);
 		}
 
 		// object size
-		double size = NaN;
 		if (dynamic_cast<CdContainer*>(Obj))
 		{
 			CdContainer* p = static_cast<CdContainer*>(Obj);
 			p->Synchronize();
-			size = p->GDSStreamSize();
+			*size = p->GDSStreamSize();
 		} else if (dynamic_cast<CdGDSStreamContainer*>(Obj))
 		{
 			CdGDSStreamContainer *_Obj = (CdGDSStreamContainer*)Obj;
 			if (_Obj->PipeInfo())
-				size = _Obj->PipeInfo()->StreamTotalIn();
+				*size = _Obj->PipeInfo()->StreamTotalIn();
 			else
-				size = _Obj->GetSize();
+				*size = _Obj->GetSize();
 		}
 
 		// good
-		int GoodFlag = 1;
+		*good = 1;
 		if (dynamic_cast<CdGDSVirtualFolder*>(Obj))
 		{
 			CdGDSVirtualFolder *v = (CdGDSVirtualFolder*)Obj;
-			GoodFlag = v->IsLoaded(true) ? 1 : 0;
+			*good = v->IsLoaded(true) ? 1 : 0;
 		} else if (dynamic_cast<CdGDSUnknown*>(Obj))
 		{
-			GoodFlag = 0;
+			*good = 0;
 		}
+		
 
 		// hidden
-		int hidden_flag = Obj->GetHidden() ||
+		*hidden = Obj->GetHidden() ||
 			Obj->Attribute().HasName(ASC16("R.invisible"));
 
 		// message
@@ -610,24 +602,28 @@ JL_DLLEXPORT PyObject* gdsnDesp(PyObject *self, PyObject *args)
 			msg = v->ErrMsg().c_str();
 		}
 
-		return Py_BuildValue(
-			"{s:s,s:s,s:s,s:s,s:s,s:N,s:s,s:s,s:d,s:d,s:N,s:N,s:s}",
-			"name",     nm.c_str(),
-			"fullname", nm2.c_str(),
-			"storage",  ste.c_str(),
-			"trait",    tra.c_str(),
-			"type",     type.c_str(),
-			"dim",      dim,
-			"encoder",  encoder.c_str(),
-			"compress", compress.c_str(),
-			"cpratio",  cpratio,
-			"size",     size,
-			"good",     PyBool_FromLong(GoodFlag),
-			"hidden",   PyBool_FromLong(hidden_flag),
-			"message",  msg.c_str()
-		);
+		rv_ans = jl_alloc_array_1d(jl_apply_array_type(jl_string_type, 1), 8);
+		jl_value_t *s;
+		void **p = (void**)jl_array_data(rv_ans);
+		p[0] = s = jl_pchar_to_string(nm.c_str(), nm.size());
+		jl_gc_wb(rv_ans, s);
+		p[1] = s = jl_pchar_to_string(nm2.c_str(), nm2.size());
+		jl_gc_wb(rv_ans, s);
+		p[2] = s = jl_pchar_to_string(ste.c_str(), ste.size());
+		jl_gc_wb(rv_ans, s);
+		p[3] = s = jl_pchar_to_string(tra.c_str(), tra.size());
+		jl_gc_wb(rv_ans, s);
+		p[4] = s = jl_pchar_to_string(type.c_str(), type.size());
+		jl_gc_wb(rv_ans, s);
+		p[5] = s = jl_pchar_to_string(encoder.c_str(), encoder.size());
+		jl_gc_wb(rv_ans, s);
+		p[6] = s = jl_pchar_to_string(compress.c_str(), compress.size());
+		jl_gc_wb(rv_ans, s);
+		p[7] = s = jl_pchar_to_string(msg.c_str(), msg.size());
+		jl_gc_wb(rv_ans, s);
 
-	COREARRAY_CATCH_NONE
+	COREARRAY_CATCH
+	return rv_ans;
 }
 
 
@@ -635,7 +631,7 @@ JL_DLLEXPORT PyObject* gdsnDesp(PyObject *self, PyObject *args)
 // ----------------------------------------------------------------------------
 // Data Operations
 // ----------------------------------------------------------------------------
-
+/*
 /// Read data from a GDS node
 JL_DLLEXPORT PyObject* gdsnRead(PyObject *self, PyObject *args)
 {
