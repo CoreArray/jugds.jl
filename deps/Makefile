@@ -74,7 +74,7 @@ LIB_COREOBJS = CoreArray.o dAllocator.o dAny.o dBase.o dBitGDS.o \
 
 
 ## Julia interface
-LIB_J_OBJS = J_CoreArray.o
+LIB_J_OBJS = jugds.o JCoreArray.o
 
 
 ## all jobs
@@ -96,8 +96,12 @@ clean:
 
 ##  Julia Interface  ##
 
-J_CoreArray.o: J_CoreArray.cpp
-	$(CXX) $(CXXFLAGS) -ICoreArray J_CoreArray.cpp -c -o $@
+jugds.o: jugds.cpp
+	$(CXX) $(CXXFLAGS) -ICoreArray jugds.cpp -c -o $@
+
+JCoreArray.o: JCoreArray.cpp
+	$(CXX) $(CXXFLAGS) -ICoreArray JCoreArray.cpp -c -o $@
+
 
 ##  CoreArray Library  ##
 
