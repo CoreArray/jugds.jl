@@ -32,7 +32,6 @@ Dr. Xiuwen Zheng ([zhengxwen@gmail.com](zhengxwen@gmail.com))
 * Learn X in Y minutes (where X=Julia): [http://learnxinyminutes.com/docs/julia/](http://learnxinyminutes.com/docs/julia/)
 
 
-
 ## Citation
 
 #### Original papers (implemented in R/Bioconductor):
