@@ -437,21 +437,14 @@ JL_DLLEXPORT jl_array_t* gdsnListName(int node_id, PdGDSObj node,
 	return rv_ans;
 }
 
-/*
-/// Get the GDS node with a given path
-JL_DLLEXPORT PyObject* gdsnIndex(PyObject *self, PyObject *args)
-{
-	int nidx;
-	Py_ssize_t ptr_int;
-	const char *path;
-	int silent;
-	if (!PyArg_ParseTuple(args, "ins" BSTR, &nidx, &ptr_int, &path, &silent))
-		return NULL;
 
+/// Get the GDS node with a given path
+JL_DLLEXPORT int gdsnIndex(int node_id, PdGDSObj node, const char *path,
+	C_BOOL silent, PdGDSObj *PObj)
+{
 	int idx;
-	Py_ssize_t ptr;
 	COREARRAY_TRY
-		CdGDSObj *Obj = get_obj(nidx, ptr_int);
+		CdGDSObj *Obj = get_obj(node_id, node);
 		CdGDSAbsFolder *Dir = dynamic_cast<CdGDSAbsFolder*>(Obj);
 		if (Dir)
 		{
@@ -459,20 +452,18 @@ JL_DLLEXPORT PyObject* gdsnIndex(PyObject *self, PyObject *args)
 			if (!Obj && !silent)
 				throw ErrGDSObj("No such GDS node \"%s\"!", path);
 			if (Obj)
-			{
-				set_obj(Obj, idx, ptr);
-			} else {
-				idx = -1; ptr = 0;
-			}
+				set_obj(Obj, idx);
+			else
+				idx = -1;
+			*PObj = Obj;
 		} else {
 			throw ErrGDSObj("It is not a folder.");
 		}
 	COREARRAY_CATCH
-
-	return Py_BuildValue("in", idx, ptr);
+	return idx;
 }
 
-
+/*
 /// Get the name of a GDS node
 JL_DLLEXPORT PyObject* gdsnName(PyObject *self, PyObject *args)
 {

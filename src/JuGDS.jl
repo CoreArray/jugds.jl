@@ -182,9 +182,29 @@ end
 
 
 # Get the name(s) of child node
-function ls_gdsn(obj::type_gdsnode, inc_hidden::Bool=false)
+function ls_gdsn(obj::Union{type_gdsfile, type_gdsnode}, inc_hidden::Bool=false)
+	if isa(obj, type_gdsfile)
+		obj = root_gdsn(obj)
+	end
 	return ccall((:gdsnListName, LibCoreArray), Vector{String},
 		(Cint, Ptr{Void}, Bool), obj.id, obj.ptr, inc_hidden)
+end
+
+
+# Get a specified GDS node with path
+function index_gdsn(obj::Union{type_gdsfile, type_gdsnode}, path::String, silent::Bool=false)
+	if isa(obj, type_gdsfile)
+		obj = root_gdsn(obj)
+	end
+	p = Ref{Ptr{Void}}(C_NULL)
+	id = ccall((:gdsnIndex, LibCoreArray), Cint,
+		(Cint, Ptr{Void}, Cstring, Bool, Ref{Ptr{Void}}),
+		obj.id, obj.ptr, path, silent, p)
+	if p[] != C_NULL
+		return type_gdsnode(id, p[])
+	else
+		return nothing
+	end
 end
 
 
@@ -205,21 +225,6 @@ function rename_gdsn(obj::type_gdsnode, newname::String)
 		(Cint, Ptr{Void}, Cstring), obj.id, obj.ptr, newname)
 	error_check()
 	return obj
-end
-
-
-# Get a specified GDS node with path
-function index_gdsn(obj::type_gdsnode, path::String, silent::Bool=false)
-	p = Ref{Ptr{Void}}(C_NULL)
-	id = ccall((:GDS_Node_Index, LibCoreArray), Cint,
-		(Cint, Ptr{Void}, Cstring, Bool, Ref{Ptr{Void}}),
-		obj.id, obj.ptr, path, silent, p)
-	error_check()
-	if p[] != C_NULL
-		return type_gdsnode(id, p[])
-	else
-		return nothing
-	end
 end
 
 function index_gdsn(file::type_gdsfile, path::String, silent::Bool=false)
