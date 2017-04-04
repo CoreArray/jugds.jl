@@ -162,39 +162,39 @@ COREARRAY_DLL_EXPORT C_BOOL GDS_Is_RFactor(PdGDSObj Obj)
 
 
 // return a Python/NumPy object from a GDS object
-COREARRAY_DLL_EXPORT jl_value_t* GDS_JArray_Read(PdAbstractArray Obj,
+COREARRAY_DLL_EXPORT jl_array_t* GDS_JArray_Read(PdAbstractArray Obj,
 	const C_Int32 *Start, const C_Int32 *Length,
 	const C_BOOL *const Selection[], C_SVType SV)
 {
-/*	static NPY_TYPES sv2npy[] = {
-		NPY_VOID,       // svCustom
-		NPY_VOID,       // svCustomInt
-		NPY_VOID,       // svCustomUInt
-		NPY_VOID,       // svCustomFloat
-		NPY_VOID,       // svCustomStr
-		NPY_INT8,       // svInt8
-		NPY_UINT8,      // svUInt8
-		NPY_INT16,      // svInt16
-		NPY_UINT16,     // svUInt16
-		NPY_INT32,      // svInt32
-		NPY_UINT32,     // svUInt32
-		NPY_INT64,      // svInt64
-		NPY_UINT64,     // svUInt64
-		NPY_FLOAT,      // svFloat32
-		NPY_DOUBLE,     // svFloat64
-		NPY_OBJECT,     // svStrUTF8
-		NPY_VOID        // svStrUTF16
+	static jl_datatype_t *sv2dt[] = {
+		NULL,       // svCustom
+		NULL,       // svCustomInt
+		NULL,       // svCustomUInt
+		NULL,       // svCustomFloat
+		NULL,       // svCustomStr
+		jl_int8_type,       // svInt8
+		jl_uint8_type,      // svUInt8
+		jl_int16_type,      // svInt16
+		jl_uint16_type,     // svUInt16
+		jl_int32_type,      // svInt32
+		jl_uint32_type,     // svUInt32
+		jl_int64_type,      // svInt64
+		jl_uint64_type,     // svUInt64
+		jl_float32_type,    // svFloat32
+		jl_float64_type,    // svFloat64
+		jl_string_type,     // svStrUTF8
+		jl_string_type      // svStrUTF16
 	};
 
 	try
 	{
 		bool bool_flag = GDS_Is_RLogical(Obj);
-		NPY_TYPES npy_type = NPY_VOID;
+		jl_datatype_t *dat_type = NULL;
 
 		if (SV==svCustom && bool_flag)
 		{
 			SV = svInt8;
-			npy_type = NPY_BOOL;
+			dat_type = jl_bool_type;
 		} else {
 			if (SV == svCustom)
 			{
@@ -208,11 +208,11 @@ COREARRAY_DLL_EXPORT jl_value_t* GDS_JArray_Read(PdAbstractArray Obj,
 				else if (SV == svCustomStr)
 					SV = svStrUTF8;
 			}
-			if ((0 <= SV) && (SV < sizeof(sv2npy)/sizeof(NPY_TYPES)))
-				npy_type = sv2npy[SV];
+			if ((0 <= SV) && (SV < sizeof(sv2dt)/sizeof(jl_datatype_t*)))
+				dat_type = sv2dt[SV];
 		}
 
-		if (npy_type == NPY_VOID)
+		if (!dat_type)
 			throw ErrGDSFmt("Data type is not supported.");
 
 		CdAbstractArray::TArrayDim St, Cnt;
@@ -231,33 +231,50 @@ COREARRAY_DLL_EXPORT jl_value_t* GDS_JArray_Read(PdAbstractArray Obj,
 		Obj->GetInfoSelection(Start, Length, Selection, NULL, NULL, ValidCnt);
 
 		int ndim = Obj->DimCnt();
-		npy_intp dims[ndim];
-		for (int i=0; i < ndim; i++) dims[i] = ValidCnt[i];
+		C_Int32 dims[ndim];
+		for (int i=0; i < ndim; i++) dims[ndim-i-1] = ValidCnt[i];
 
-		// create a numpy array object
-		PyObject *rv_ans = PyArray_SimpleNew(ndim, dims, npy_type);
-
+		// create an array object
+		jl_value_t *atype = jl_apply_array_type(dat_type, ndim);
+		jl_array_t *rv_ans;
+		switch (ndim)
+		{
+			case 1:
+				rv_ans = jl_alloc_array_1d(atype, dims[0]);
+				break;
+			case 2:
+				rv_ans = jl_alloc_array_2d(atype, dims[0], dims[1]);
+				break;
+			case 3:
+				rv_ans = jl_alloc_array_3d(atype, dims[0], dims[1], dims[2]);
+				break;
+			default:
+				throw ErrGDSFmt("The current implementation does not support more than 3 dims. Please asks the author to extend the function.");
+		}
+		
 		// read
 		if (COREARRAY_SV_NUMERIC(SV))
 		{
-			void *datptr = PyArray_DATA(rv_ans);
+			void *datptr = jl_array_data(rv_ans);
 			if (!Selection)
 				Obj->ReadData(Start, Length, datptr, SV);
 			else
 				Obj->ReadDataEx(Start, Length, Selection, datptr, SV);
 		} else if (SV == svStrUTF8)
 		{
-			const size_t n = PyArray_SIZE(rv_ans);
+			const size_t n = jl_array_len(rv_ans);
 			vector<UTF8String> strbuf(n);
 			if (!Selection)
 				Obj->ReadData(Start, Length, &strbuf[0], SV);
 			else
 				Obj->ReadDataEx(Start, Length, Selection, &strbuf[0], SV);
-			PyObject** p = (PyObject**)PyArray_DATA(rv_ans);
+			void **p = (void**)jl_array_data(rv_ans);
 			for (size_t i=0; i < strbuf.size(); i++)
 			{
-				UTF8String &s = strbuf[i];
-				PyArray_SETITEM(rv_ans, p++, PYSTR_SET2(&s[0], s.size()));
+				UTF8String &ss = strbuf[i];
+				jl_value_t *s = jl_pchar_to_string(ss.c_str(), ss.size());
+				*p++ = s;
+				jl_gc_wb(rv_ans, s);
 			}
 		}
 
@@ -273,7 +290,6 @@ COREARRAY_DLL_EXPORT jl_value_t* GDS_JArray_Read(PdAbstractArray Obj,
 	}
 
 	return NULL;  // never execute
-*/
 }
 
 
@@ -733,7 +749,7 @@ static TFUNC c_api[] = {
 	(TFUNC)GDS_ID2FileRoot,
 	(TFUNC)GDS_Is_RLogical,
 	(TFUNC)GDS_Is_RFactor,
-	// (TFUNC)GDS_Py_Array_Read,
+	(TFUNC)GDS_JArray_Read,
 
 	// functions for file structure
 	(TFUNC)GDS_File_Create,

@@ -129,7 +129,7 @@ extern "C" {
 */
 
 	/// return an R data object from a GDS object, allowing raw-type data
-	extern jl_value_t* GDS_JArray_Read(PdAbstractArray Obj, const C_Int32 *Start,
+	extern jl_array_t* GDS_JArray_Read(PdAbstractArray Obj, const C_Int32 *Start,
 		const C_Int32 *Length, const C_BOOL *const Selection[],
 		enum C_SVType SV);
 

@@ -631,17 +631,11 @@ JL_DLLEXPORT jl_array_t* gdsnDesp(int node_id, PdGDSObj node,
 // ----------------------------------------------------------------------------
 // Data Operations
 // ----------------------------------------------------------------------------
-/*
-/// Read data from a GDS node
-JL_DLLEXPORT PyObject* gdsnRead(PyObject *self, PyObject *args)
-{
-	int nidx;
-	Py_ssize_t ptr_int;
-	PyObject *start, *count;
-	const char *cvt;
-	if (!PyArg_ParseTuple(args, "inOOs", &nidx, &ptr_int, &start, &count, &cvt))
-		return NULL;
 
+/// Read data from a GDS node
+JL_DLLEXPORT jl_array_t* gdsnRead(int node_id, PdGDSObj node,
+	jl_array_t *start, jl_array_t *count, const char *cvt)
+{
 	// check the argument 'cvt'
 	C_SVType sv;
 	if (strcmp(cvt, "") == 0)
@@ -670,49 +664,32 @@ JL_DLLEXPORT PyObject* gdsnRead(PyObject *self, PyObject *args)
 		sv = svStrUTF8;
 	else if (strcmp(cvt, "utf16") == 0)
 		sv = svStrUTF16;
-	else {
-		PyErr_SetString(PyExc_ValueError, "Invalid 'cvt'.");
-		return NULL;
-	}
+	else
+		jl_error("Invalid 'cvt'.");
 
 	// check the argument 'start'
 	CdAbstractArray::TArrayDim dm_st;
-	int dm_st_n = 0;
-	if (PyList_Check(start))
+	int dm_st_n = jl_array_len(start);
 	{
-		dm_st_n = PyList_Size(start);
-		for(int i=0; i < dm_st_n; i++)
-			dm_st[i] = PyInt_AsLong(PyList_GetItem(start, i));
-	} else if (start != Py_None)
-	{
-		PyErr_SetString(PyExc_ValueError, "'start' should be None or a list.");
-		return NULL;
+		C_Int64 *p = (C_Int64*)jl_array_data(start);
+		for (int i=0; i < dm_st_n; i++) dm_st[i] = p[i];
 	}
 
 	// check the argument 'count'
 	CdAbstractArray::TArrayDim dm_cnt;
-	int dm_cnt_n = 0;
-	if (PyList_Check(count))
+	int dm_cnt_n = jl_array_len(count);
 	{
-		dm_cnt_n = PyList_Size(count);
-		for(int i=0; i < dm_cnt_n; i++)
-			dm_cnt[i] = PyInt_AsLong(PyList_GetItem(count, i));
-	} else if (count != Py_None)
-	{
-		PyErr_SetString(PyExc_ValueError, "'count' should be None or a list.");
-		return NULL;
+		C_Int64 *p = (C_Int64*)jl_array_data(count);
+		for (int i=0; i < dm_cnt_n; i++) dm_cnt[i] = p[i];
 	}
 
 	if ((dm_st_n==0 && dm_cnt_n>0) || (dm_st_n>0 && dm_cnt_n==0))
-	{
-		PyErr_SetString(PyExc_ValueError, "'start' and 'count' should be both None.");
-		return NULL;
-	}
+		jl_error("'start' and 'count' should be both None.");
 
 
 	COREARRAY_TRY
 
-		CdGDSObj *obj = get_obj(nidx, ptr_int);
+		CdGDSObj *obj = get_obj(node_id, node);
 		CdAbstractArray *Obj = dynamic_cast<CdAbstractArray*>(obj);
 		if (Obj == NULL)
 			throw ErrGDSFmt(ERR_NO_DATA);
@@ -746,15 +723,14 @@ JL_DLLEXPORT PyObject* gdsnRead(PyObject *self, PyObject *args)
 			pDL = dm_cnt;
 		}
 
-		PyObject *rv = GDS_Py_Array_Read(Obj, pDS, pDL, NULL, sv);
-		return rv;
+		return GDS_JArray_Read(Obj, pDS, pDL, NULL, sv);
 
-	COREARRAY_CATCH_NONE
+	COREARRAY_CATCH
 	return NULL;
 }
 
 
-
+/*
 // ----------------------------------------------------------------------------
 // Attribute Operations
 // ----------------------------------------------------------------------------

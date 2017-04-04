@@ -26,7 +26,7 @@ import	Base: ifelse, joinpath, isfile, show, print, println, utf8
 export	type_gdsfile, type_gdsnode,
 		create_gds, open_gds, close_gds, sync_gds, cleanup_gds,
 		root_gdsn, name_gdsn, rename_gdsn, ls_gdsn, index_gdsn, getfolder_gdsn,
-		delete_gdsn, objdesp_gdsn,
+		delete_gdsn, objdesp_gdsn, read_gdsn,
 		put_attr_gdsn, get_attr_gdsn, delete_attr_gdsn
 
 
@@ -238,28 +238,14 @@ function objdesp_gdsn(obj::type_gdsnode)
 end
 
 
-# Get the folder node which contains the specified node
-function getfolder_gdsn(obj::type_gdsnode)
-	p = Ref{Ptr{Void}}(C_NULL)
-	id = ccall((:GDS_GetFolder, LibCoreArray), Cint,
-		(Cint, Ptr{Void}, Ref{Ptr{Void}}), obj.id, obj.ptr, p)
-	error_check()
-	if p[] != C_NULL
-		return type_gdsnode(id, p[])
-	else
-		return nothing
-	end
+# Get the descritpion of a specified node
+function read_gdsn(obj::type_gdsnode, start::Vector{Int64}=Vector{Int64}(),
+		count::Vector{Int64}=Vector{Int64}(), cvt::String="")
+	p = ccall((:gdsnRead, LibCoreArray), Ptr{Void},
+		(Cint, Ptr{Void}, Vector{Int64}, Vector{Int64}, Cstring),
+		obj.id, obj.ptr, start, count, cvt)
+	return unsafe_pointer_to_objref(p)
 end
-
-
-# Delete a specified node
-function delete_gdsn(obj::type_gdsnode, force::Bool=false)
-	ccall((:GDS_DeleteNode, LibCoreArray), Void,
-		(Cint, Ptr{Void}, Bool), obj.id, obj.ptr, force)
-	error_check()
-	return nothing
-end
-
 
 
 ####  GDS Attributes  ####
