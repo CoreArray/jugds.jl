@@ -259,7 +259,16 @@ end
 
 # Get the attributes of a GDS node
 function get_attr_gdsn(obj::type_gdsnode)
-	return nothing
+	s = ccall((:gdsnGetAttrName, LibCoreArray), Ptr{Void}, (Cint, Ptr{Void}),
+		obj.id, obj.ptr)
+	nm = unsafe_pointer_to_objref(s)
+	dict = Dict{String, Any}()
+	for (i in 1:length(nm))
+		p = ccall((:gdsnGetAttrIdx, LibCoreArray), Ptr{Void}, (Cint, Ptr{Void}, Cint),
+			obj.id, obj.ptr, i)
+		dict[nm[i]] = unsafe_pointer_to_objref(p)
+	end
+	return dict
 end
 
 # Remove an attribute from a GDS node

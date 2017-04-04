@@ -730,65 +730,82 @@ JL_DLLEXPORT jl_array_t* gdsnRead(int node_id, PdGDSObj node,
 }
 
 
-/*
+
 // ----------------------------------------------------------------------------
 // Attribute Operations
 // ----------------------------------------------------------------------------
 
-JL_DLLEXPORT PyObject* any2obj(CdAny &Obj)
+/// Enumerate the names of its attributes
+JL_DLLEXPORT jl_array_t* gdsnGetAttrName(int node_id, PdGDSObj node)
+{
+	jl_array_t *rv_ans = NULL;
+	COREARRAY_TRY
+		CdGDSObj *Obj = get_obj(node_id, node);
+		const size_t n = Obj->Attribute().Count();
+		jl_value_t *atype = jl_apply_array_type(jl_string_type, 1);
+		rv_ans = jl_alloc_array_1d(atype, n);
+		void **p = (void**)jl_array_data(rv_ans);
+		for (size_t i=0; i < n; i++)
+		{
+			jl_value_t *s = jl_cstr_to_string(
+				RawText(Obj->Attribute().Names(i)).c_str());
+			*p++ = s;
+			jl_gc_wb(rv_ans, s);
+		}
+	COREARRAY_CATCH
+	return rv_ans;
+}
+
+
+JL_DLLEXPORT jl_value_t* any2obj(CdAny &Obj)
 {
 	if (Obj.IsInt())
 	{
-		return PyInt_FromLong(Obj.GetInt32());
+		return jl_box_int32(Obj.GetInt32());
 	} else if (Obj.IsFloat())
 	{
-		return PyFloat_FromDouble(Obj.GetFloat64());
+		return jl_box_float64(Obj.GetFloat64());
 	} else if (Obj.IsString())
 	{
 		const UTF8String &s = Obj.GetStr8();
-		return PYSTR_SET2(s.c_str(), s.size());
+		return jl_pchar_to_string(s.c_str(), s.size());
 	} else if (Obj.IsBool())
 	{
-		return PyBool_FromLong(Obj.GetBool() ? 1 : 0);
+		return jl_box_bool(Obj.GetBool() ? 1 : 0);
 	} else if (Obj.IsArray())
 	{
 		const size_t n = Obj.GetArrayLength();
 		CdAny *p = Obj.GetArray();
-		PyObject *rv_ans = PyList_New(n);
+		jl_value_t *atype = jl_apply_array_type(jl_any_type, 1);
+		jl_array_t *rv_ans = jl_alloc_array_1d(atype, n);
+		JL_GC_PUSH1(&rv_ans);
+		void **data = (void**)jl_array_data(rv_ans);
 		for (size_t i=0; i < n; i++)
-			PyList_SetItem(rv_ans, i, any2obj(*p++));
-		return rv_ans;
-	} else
-		Py_RETURN_NONE;
-}
-
-/// Get the attribute(s) of a GDS node
-JL_DLLEXPORT PyObject* gdsnGetAttr(PyObject *self, PyObject *args)
-{
-	int nidx;
-	Py_ssize_t ptr_int;
-	if (!PyArg_ParseTuple(args, "in", &nidx, &ptr_int))
-		return NULL;
-
-	COREARRAY_TRY
-		CdGDSObj *Obj = get_obj(nidx, ptr_int);
-		if (Obj->Attribute().Count() > 0)
 		{
-			const size_t n = Obj->Attribute().Count();
-			PyObject *rv_ans = PyDict_New();
-			for (size_t i=0; i < n; i++)
-			{
-				PyObject *x = any2obj(Obj->Attribute()[i]);
-				PyDict_SetItemString(rv_ans,
-					RawText(Obj->Attribute().Names(i)).c_str(), x);
-				Py_DECREF(x);
-			}
-			return rv_ans;
+			data[i] = any2obj(*p++);
+			jl_gc_wb(rv_ans, data[i]);
 		}
-	COREARRAY_CATCH_NONE
+		JL_GC_POP();
+		return (jl_value_t*)rv_ans;
+	} else
+		return jl_nothing;
 }
 
-*/
+/// Get the attribute(s) of a GDS node with an index
+JL_DLLEXPORT jl_value_t* gdsnGetAttrIdx(int node_id, PdGDSObj Obj, int idx)
+{
+	jl_value_t *rv_ans = NULL;
+	COREARRAY_TRY
+		if ((1 <= idx) && (idx <= (int)Obj->Attribute().Count()))
+		{
+			rv_ans = any2obj(Obj->Attribute()[idx-1]);
+		} else {
+			throw ErrGDSFmt("Invalid index in 'gdsnGetAttrIdx'.");
+		}
+	COREARRAY_CATCH
+	return rv_ans;
+}
+
 
 
 // ----------------------------------------------------------------------------
