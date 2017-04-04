@@ -795,11 +795,14 @@ JL_DLLEXPORT PyObject* gdsnGetAttr(PyObject *self, PyObject *args)
 // Register routines
 // ----------------------------------------------------------------------------
 
+extern void *GDS_C_API;
+
 /// Initialize
-JL_DLLEXPORT void GDS_Init()
+JL_DLLEXPORT void* GDS_Init()
 {
 	// to register CoreArray classes and objects
 	RegisterClass();
+	return GDS_C_API;
 }
 
 }

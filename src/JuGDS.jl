@@ -50,9 +50,10 @@ if !isfile(libname)
 end
 
 const LibCoreArray = libname
+global lib_c_api = C_NULL
 
 function __init__()
-	ccall((:GDS_Init, LibCoreArray), Void, ())
+	global lib_c_api = ccall((:GDS_Init, LibCoreArray), Ptr{Void}, ())
 end
 
 

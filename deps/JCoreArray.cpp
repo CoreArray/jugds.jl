@@ -741,9 +741,7 @@ COREARRAY_DLL_EXPORT int GDS_Mach_Finite(double val)
 
 typedef void (*TFUNC)();
 
-void *GDS_API = NULL;
-
-static TFUNC c_api[] = {
+COREARRAY_DLL_EXPORT TFUNC GDS_C_API[] = {
 	// Python objects
 	(TFUNC)GDS_ID2File,
 	(TFUNC)GDS_ID2FileRoot,
