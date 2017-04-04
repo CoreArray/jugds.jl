@@ -81,7 +81,7 @@ immutable type_infogdsn
 	dim::Vector{Int64}
 	encoder::String
 	compress::String
-	cratio::Float64
+	cpratio::Float64
 	size::Int64
 	good::Bool
 	hidden::Bool
@@ -263,7 +263,7 @@ function get_attr_gdsn(obj::type_gdsnode)
 		obj.id, obj.ptr)
 	nm = unsafe_pointer_to_objref(s)
 	dict = Dict{String, Any}()
-	for (i in 1:length(nm))
+	for i = 1:length(nm)
 		p = ccall((:gdsnGetAttrIdx, LibCoreArray), Ptr{Void}, (Cint, Ptr{Void}, Cint),
 			obj.id, obj.ptr, i)
 		dict[nm[i]] = unsafe_pointer_to_objref(p)
@@ -307,46 +307,33 @@ function size_fmt(size::Int64)
 	end
 end
 
-function enum_node(io::IO, obj::type_gdsnode, space::String, level::Int,
-	all::Bool, expand::Bool, fullname::Bool)
-
+function enum_node(io::IO, obj::type_gdsnode, prefix::String,
+		fullname::Bool, last::Bool, all::Bool, attr::Bool, expand::Bool)
 	d = objdesp_gdsn(obj)
-	if !all
-		if d.hidden
-			return nothing
-		end
-	end
-
-	lText = ""; rText = ""
 	if d.gds_type == "Label"
 		lText = " "; rText = " "
 	elseif d.gds_type == "VFolder"
-		lText = ifelse(d.good, "[ -->", "[ -X-")
-		rText = ifelse(d.good, "]", "]")
+		if d.good
+			lText = "[ -->"; rText = "]"
+		else
+			lText = "[ -X-"; rText = "]"; expand = false
+		end
 	elseif d.gds_type == "Folder"
 		lText = "["; rText = "]"
 	elseif d.gds_type == "Unknown"
-		lText = "	-X-"; rText = ""
+		lText = "   -X-"; rText = ""; expand = false
 	else
 		lText = "{"; rText = "}"
 	end
 
-	s = lText * " " * d.trait
+	s = prefix * "+ " * name_gdsn(obj, fullname) * "   " * lText * " " * d.trait
+
+	# if logical, factor, list, or data.frame
 	if d.gds_type == "Logical"
 		s = s * ",logical"
 	elseif d.gds_type == "Factor"
 		s = s * ",factor"
 	end
-	# } else if ("R.class" %in% names(at))
-	# {
-	#	if (n$trait != "")
-	#		s <- paste(s, BLURRED(","), sep="")
-	#	if (!is.null(at$R.class))
-	#	{
-	#		s <- paste(s,
-	#			BLURRED(paste(at$R.class, sep="", collapse=",")), sep="")
-	#	}
-	#}
 
 	# show the dimension
 	if length(d.dim) > 0
@@ -355,34 +342,65 @@ function enum_node(io::IO, obj::type_gdsnode, space::String, level::Int,
 
 	# show compression
 	if d.encoder != ""
-		s = s * " " * d.encoder
-		if isfinite(d.cratio)
-			s = s * @sprintf("(%0.2f%%)", 100*d.cratio)
+		if attr
+			s = s * " " * d.compress
+		else
+			s = s * " " * d.encoder
+		end
+	end
+
+	if isfinite(d.cpratio)
+		if d.cpratio >= 0.10
+			s = s * @sprintf("(%0.1f%%)", 100*d.cpratio)
+		else
+			s = s * @sprintf("(%0.2f%%)", 100*d.cpratio)
 		end
 	end
 
 	if d.size >= 0
-		s = s * ", " * size_fmt(d.size)
+		s = s * size_fmt(d.size)
 	end
 
 	s = s * " " * rText
-	# if (length(at) > 0L)
-	#	s <- paste(s, rText, "*")
-	#else
-	#	s <- paste(s, " ", rText, sep="")
 
-	print_with_color(:black, io, space, "+ ",
-		ifelse(fullname, d.fullname, d.name), "   ")
-	print_with_color(:white, io, s)
-	println(io)
+	# attributes
+	at = get_attr_gdsn(obj)
+	if length(at) > 0
+		s = s * " *"
+		if attr
+			s = s * "< " # + str(at)
+		end
+	end
 
-	if expand
-		if d.gds_type == "Folder"
-			for nm = ls_gdsn(obj)
-				enum_node(io, index_gdsn(obj, nm),
-					ifelse(level==1, "|--", "|  ") * space,
-					level+1, all, expand, false)
+	println(s)
+
+	if expand && d.gds_type=="Folder"
+		nm = ls_gdsn(obj, all)
+		for i = 1:length(nm)
+			n = length(prefix)
+			if i < length(nm)
+				if n >= 3
+					if last
+						s = prefix[1:end-3] * "   |--"
+					else
+						s = prefix[1:end-3] * "|  |--"
+					end
+				else
+					s = "|--"
+				end
+			else
+				if n >= 3
+					if last
+						s = prefix[1:end-3] * "   \\--"
+					else
+						s = prefix[1:end-3] * "|  \\--"
+					end
+				else
+					s = "\\--"
+				end
 			end
+			enum_node(io, index_gdsn(obj, nm[i]), s, false, i>=length(nm),
+				all, attr, expand)
 		end
 	end
 
@@ -390,19 +408,19 @@ function enum_node(io::IO, obj::type_gdsnode, space::String, level::Int,
 end
 
 
-function show(io::IO, file::type_gdsfile, all=false)
+function show(io::IO, file::type_gdsfile, attr=false, all=false)
 	size = ccall((:gdsFileSize, LibCoreArray), Clonglong, (Cint,), file.id)
 	print_with_color(:bold, io, "File:")
 	print_with_color(:black, io, " ", file.filename)
 	print_with_color(:white, io, " (", size_fmt(size), ")")
 	println(io)
-	show(io, root_gdsn(file), all)
+	show(io, root_gdsn(file), attr, all)
 end
 
 
-function show(io::IO, obj::type_gdsnode, all=false, expand=true)
+function show(io::IO, obj::type_gdsnode, attr=false, all=false, expand=true)
 	print_with_color(:bold, io, "")
-	enum_node(io, obj, "", 1, all, expand, true)
+	enum_node(io, obj, "", true, false, all, attr, expand)
 end
 
 end
