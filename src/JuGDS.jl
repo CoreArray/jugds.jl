@@ -23,7 +23,7 @@ using Compat
 
 import	Base: ifelse, joinpath, isfile, show, print, println, utf8
 
-export	type_gdsfile, type_gdsnode,
+export	type_gdsfile, type_gdsnode, gds_get_include,
 		create_gds, open_gds, close_gds, sync_gds, cleanup_gds,
 		root_gdsn, name_gdsn, rename_gdsn, ls_gdsn, index_gdsn, getfolder_gdsn,
 		delete_gdsn, objdesp_gdsn, read_gdsn,
@@ -54,6 +54,12 @@ global lib_c_api = C_NULL
 
 function __init__()
 	global lib_c_api = ccall((:GDS_Init, LibCoreArray), Ptr{Void}, ())
+end
+
+
+
+function gds_get_include()
+	return joinpath(Pkg.dir(), "jugds", "deps", "include")
 end
 
 
@@ -129,6 +135,14 @@ const c_int64_push = cfunction(array_push, Void, (Ptr{Void}, Int64))
 ####  GDS File  ####
 
 # Create a GDS file
+"""
+	create_gds(filename, allow_dup)
+Create a new CoreArray Genomic Data Structure (GDS) file.
+# Arguments
+* `filename::String`: the file name of a new GDS file to be created
+* `allow_dup::Bool=false`: if true, it is allowed to open a GDS file with read-only mode when it has been opened in the same session
+# Examples
+"""
 function create_gds(filename::String, allow_dup::Bool=false)
 	id = ccall((:gdsCreateGDS, LibCoreArray), Cint, (Cstring,Bool),
 		filename, allow_dup)
@@ -137,6 +151,15 @@ end
 
 
 # Open an existing GDS file
+"""
+	open_gds(filename, readonly, allow_dup)
+Open an existing file of CoreArray Genomic Data Structure (GDS) for reading or writing.
+# Arguments
+* `filename::String`: the file name of a new GDS file to be created
+* `readonly::Bool=true`: if true, the file is opened read-only; otherwise, it is allowed to write data to the file
+* `allow_dup::Bool=false`: if true, it is allowed to open a GDS file with read-only mode when it has been opened in the same session
+# Examples
+"""
 function open_gds(filename::String, readonly::Bool=true, allow_dup::Bool=false)
 	id = ccall((:gdsOpenGDS, LibCoreArray), Cint, (Cstring, Bool, Bool),
 		filename, readonly, allow_dup)

@@ -251,7 +251,9 @@ COREARRAY_DLL_EXPORT jl_array_t* GDS_JArray_Read(PdAbstractArray Obj,
 			default:
 				throw ErrGDSFmt("The current implementation does not support more than 3 dims. Please asks the author to extend the function.");
 		}
-		
+
+		JL_GC_PUSH1(&rv_ans);
+
 		// read
 		if (COREARRAY_SV_NUMERIC(SV))
 		{
@@ -278,6 +280,7 @@ COREARRAY_DLL_EXPORT jl_array_t* GDS_JArray_Read(PdAbstractArray Obj,
 			}
 		}
 
+		JL_GC_POP();
 		return rv_ans;
 	}
 	catch (ErrAllocRead &E)
