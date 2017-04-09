@@ -46,3 +46,40 @@ Zheng X, Gogarten S, Lawrence M, Stilp A, Conomos M, Weir BS, Laurie C, Levine D
 ## Copyright Notice
 
 * CoreArray C++ library, [LGPL-3 License](./COPYRIGHTS), 2007-2017, Xiuwen Zheng
+
+
+## Examples
+
+```julia
+using jugds
+
+fn = joinpath(Pkg.dir(), "jugds", "demo", "data", "ceu_exon.gds")
+f = open_gds(fn)
+f
+close_gds(f)
+```
+
+```
+File: jugds/demo/data/ceu_exon.gds (32.5K)
++    [  ] *
+|--+ description   [  ] *
+|--+ sample.id   { Str8 90 LZMA_ra(35.8%), 258B } *
+|--+ variant.id   { Int32 1348 LZMA_ra(16.8%), 906B } *
+|--+ position   { Int32 1348 LZMA_ra(64.6%), 3.4K } *
+|--+ chromosome   { Str8 1348 LZMA_ra(4.63%), 158B } *
+|--+ allele   { Str8 1348 LZMA_ra(16.7%), 902B } *
+|--+ genotype   [  ] *
+|  |--+ data   { Bit2 1348x90x2 LZMA_ra(26.3%), 15.6K } *
+|  |--+ extra.index   { Int32 0x3 LZMA_ra, 19B } *
+|  \--+ extra   { Int16 0 LZMA_ra, 19B }
+|--+ phase   [  ]
+|  |--+ data   { Bit1 1348x90 LZMA_ra(0.91%), 138B } *
+|  |--+ extra.index   { Int32 0x3 LZMA_ra, 19B } *
+|  \--+ extra   { Bit1 0 LZMA_ra, 19B }
+|--+ annotation   [  ]
+|  |--+ id   { Str8 1348 LZMA_ra(38.4%), 5.5K } *
+|  |--+ qual   { Float32 1348 LZMA_ra(2.26%), 122B } *
+|  \--+ filter   { Int32,factor 1348 LZMA_ra(2.26%), 122B } *
+\--+ sample.annotation   [  ]
+   \--+ family   { Str8 90 LZMA_ra(57.1%), 222B }
+```

@@ -387,7 +387,7 @@ function enum_node(io::IO, obj::type_gdsnode, prefix::String,
 	end
 
 	if d.size >= 0
-		s = s * size_fmt(d.size)
+		s = s * ", " * size_fmt(d.size)
 	end
 
 	s = s * " " * rText
