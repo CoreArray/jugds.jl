@@ -168,6 +168,12 @@ end
 
 
 # Close the GDS file
+"""
+	close_gds(file)
+Close a CoreArray Genomic Data Structure (GDS) file.
+# Arguments
+* `file::type_gdsfile`: an instance of `type_gdsfile`
+"""
 function close_gds(file::type_gdsfile)
 	ccall((:gdsCloseGDS, LibCoreArray), Void, (Cint,), file.id)
 	file.filename = ""
