@@ -159,6 +159,12 @@ Open an existing file of CoreArray Genomic Data Structure (GDS) for reading or w
 * `readonly::Bool=true`: if true, the file is opened read-only; otherwise, it is allowed to write data to the file
 * `allow_dup::Bool=false`: if true, it is allowed to open a GDS file with read-only mode when it has been opened in the same session
 # Examples
+```julia
+fn = joinpath(Pkg.dir(), "jugds", "demo", "data", "ceu_exon.gds")
+f = open_gds(fn)
+f
+close_gds(f)
+```
 """
 function open_gds(filename::String, readonly::Bool=true, allow_dup::Bool=false)
 	id = ccall((:gdsOpenGDS, LibCoreArray), Cint, (Cstring, Bool, Bool),
