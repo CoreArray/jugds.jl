@@ -2,7 +2,7 @@
 //
 // JCoreArray.cpp: Export the C routines of CoreArray library
 //
-// Copyright (C) 2017    Xiuwen Zheng
+// Copyright (C) 2015-2017    Xiuwen Zheng
 //
 // jugds is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License Version 3 as

@@ -17,9 +17,8 @@
 # License along with jugds.
 # If not, see <http://www.gnu.org/licenses/>.
 
-module jugds
 
-using Compat
+module jugds
 
 import	Base: ifelse, joinpath, isfile, show, print, println, utf8
 
@@ -58,6 +57,15 @@ end
 
 
 
+# Get the directory of jugds *.h header files
+"""
+	gds_get_include()
+Return the directory that contains the jugds *.h header files.
+# Examples
+```jldoctest
+julia> gds_get_include()
+```
+"""
 function gds_get_include()
 	return joinpath(Pkg.dir(), "jugds", "deps", "include")
 end
@@ -282,6 +290,7 @@ function read_gdsn(obj::type_gdsnode, start::Vector{Int64}=Vector{Int64}(),
 		obj.id, obj.ptr, start, count, cvt)
 	return unsafe_pointer_to_objref(p)
 end
+
 
 
 ####  GDS Attributes  ####
