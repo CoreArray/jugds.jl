@@ -51,6 +51,8 @@ end
 const LibCoreArray = libname
 global lib_c_api = C_NULL
 
+
+# package initialization
 function __init__()
 	global lib_c_api = ccall((:GDS_Init, LibCoreArray), Ptr{Void}, ())
 end
@@ -114,29 +116,6 @@ function error_check()
 	nothing
 end
 
-
-function text_push(pobj::Ptr{Void}, txt::Ptr{UInt8}, len::Csize_t)
-	obj = unsafe_pointer_to_objref(pobj)
-	push!(obj, utf8(txt, len))
-	nothing
-end
-
-function text_set(pobj::Ptr{Void}, index::Csize_t, txt::Ptr{UInt8}, len::Csize_t)
-	s = unsafe_pointer_to_objref(pobj)
-	s[index] = utf8(txt, len)
-	nothing
-end
-
-function array_push(pobj::Ptr{Void}, val)
-	obj = unsafe_pointer_to_objref(pobj)
-	push!(obj, val)
-	nothing
-end
-
-
-const c_text_push  = cfunction(text_push,  Void, (Ptr{Void}, Ptr{UInt8}, Csize_t))
-const c_text_set   = cfunction(text_set,   Void, (Ptr{Void}, Csize_t, Ptr{UInt8}, Csize_t))
-const c_int64_push = cfunction(array_push, Void, (Ptr{Void}, Int64))
 
 
 
