@@ -22,7 +22,8 @@ module jugds
 
 import Base: joinpath, show, print_with_color, println
 
-export type_gdsfile, type_gdsnode, gds_get_include,
+export anygdsfile, type_gdsfile, type_gdsnode,
+	gds_get_include,
 	create_gds, open_gds, close_gds, sync_gds, cleanup_gds,
 	root_gdsn, name_gdsn, rename_gdsn, ls_gdsn, index_gdsn, getfolder_gdsn,
 	delete_gdsn, objdesp_gdsn, read_gdsn,
@@ -76,15 +77,17 @@ end
 
 ####  Type of GDS File and Node	 ####
 
-type type_gdsfile
-	filename::String
-	id::Int32
-	readonly::Bool
+abstract anygdsfile
+
+type type_gdsfile <: anygdsfile
+	filename::String  # file name
+	id::Int32         # internal file index
+	readonly::Bool    # read-only
 end
 
 type type_gdsnode
-	id::Int32
-	ptr::Ptr{Void}
+	id::Int32         # internal index
+	ptr::Ptr{Void}    # internal validation pointer
 end
 
 # GDS variable information
