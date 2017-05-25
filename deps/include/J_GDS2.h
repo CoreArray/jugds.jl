@@ -20,10 +20,10 @@
 // If not, see <http://www.gnu.org/licenses/>.
 
 
-#ifndef _PYGDS_C_FILE_
-#define _PYGDS_C_FILE_
+#ifndef _JUGDS_C_FILE_
+#define _JUGDS_C_FILE_
 
-#include <PyGDS.h>
+#include <J_GDS.h>
 
 
 #ifdef __cplusplus
@@ -38,44 +38,44 @@ static TFUNC *c_api = NULL;
 
 
 // ===========================================================================
-// Python function
+// Julia function
 
-#define IDX_PY    0
+#define IDX_JL    0
 // (TFUNC)GDS_ID2File
 // (TFUNC)GDS_ID2FileRoot
 
 typedef PdGDSFile (*Type_ID2File)(int);
 COREARRAY_DLL_LOCAL PdGDSFile GDS_ID2File(int file_id)
 {
-	return (*(Type_ID2File)c_api[IDX_PY+0])(file_id);
+	return (*(Type_ID2File)c_api[IDX_JL+0])(file_id);
 }
 
 typedef PdGDSFolder (*Type_ID2FileRoot)(int);
 COREARRAY_DLL_LOCAL PdGDSFolder GDS_ID2FileRoot(int file_id)
 {
-	return (*(Type_ID2FileRoot)c_api[IDX_PY+1])(file_id);
+	return (*(Type_ID2FileRoot)c_api[IDX_JL+1])(file_id);
 }
 
 typedef C_BOOL (*Type_Is_RLogical)(PdGDSObj);
 COREARRAY_DLL_LOCAL C_BOOL GDS_Is_RLogical(PdGDSObj Obj)
 {
-	return (*(Type_Is_RLogical)c_api[IDX_PY+2])(Obj);
+	return (*(Type_Is_RLogical)c_api[IDX_JL+2])(Obj);
 }
 
 typedef C_BOOL (*Type_Is_RFactor)(PdGDSObj);
 COREARRAY_DLL_LOCAL C_BOOL GDS_Is_RFactor(PdGDSObj Obj)
 {
-	return (*(Type_Is_RFactor)c_api[IDX_PY+3])(Obj);
+	return (*(Type_Is_RFactor)c_api[IDX_JL+3])(Obj);
 }
 
-typedef PyObject* (*Type_PyArrayRead)(PdAbstractArray Obj,
+typedef jl_array_t* (*Type_JArrayRead)(PdAbstractArray Obj,
 	const C_Int32 *Start, const C_Int32 *Length,
 	const C_BOOL *const Selection[], enum C_SVType SV);
-COREARRAY_DLL_LOCAL PyObject* GDS_Py_Array_Read(PdAbstractArray Obj,
+COREARRAY_DLL_LOCAL jl_array_t* GDS_JArray_Read(PdAbstractArray Obj,
 	const C_Int32 *Start, const C_Int32 *Length,
 	const C_BOOL *const Selection[], enum C_SVType SV)
 {
-	return (*(Type_PyArrayRead)c_api[IDX_PY+4])(Obj, Start, Length,
+	return (*(Type_JArrayRead)c_api[IDX_JL+4])(Obj, Start, Length,
 		Selection, SV);
 }
 
@@ -84,7 +84,7 @@ COREARRAY_DLL_LOCAL PyObject* GDS_Py_Array_Read(PdAbstractArray Obj,
 // ===========================================================================
 // File structure
 
-#define IDX_FILE    (IDX_PY + 5)
+#define IDX_FILE    (IDX_JL + 5)
 // (TFUNC)GDS_File_Create
 // (TFUNC)GDS_File_Open
 // (TFUNC)GDS_File_Close
@@ -712,40 +712,9 @@ COREARRAY_DLL_LOCAL void GDS_R_Is_Element(PdAbstractArray Obj, SEXP SetEL,
 // ===========================================================================
 
 /// initialize the GDS routines
-int Init_GDS_Routines()
+void Init_GDS_Routines(void *api)
 {
-	PyObject *pkg = PyImport_ImportModule("pygds.ccall");
-	if (pkg == NULL)
-	{
-		PyErr_SetString(PyExc_ImportError, "pygds.ccall failed to import");
-		return -1;
-	}
-
-	PyObject *api = NULL;
-	api = PyObject_GetAttrString(pkg, "_GDS_C_API");
-	Py_DECREF(pkg);
-	if (api == NULL)
-	{
-		PyErr_SetString(PyExc_AttributeError, "_GDS_C_API not found");
-		return -1;
-	}
-
-	if (!PyCapsule_CheckExact(api))
-	{
-		PyErr_SetString(PyExc_RuntimeError, "_GDS_C_API is not PyCapsule object");
-		Py_DECREF(api);
-		return -1;
-	}
-	c_api = (TFUNC*)PyCapsule_GetPointer(api, NULL);
-
-	Py_DECREF(api);
-	if (c_api == NULL)
-	{
-		PyErr_SetString(PyExc_RuntimeError, "_GDS_C_API is NULL pointer");
-		return -1;
-	}
-
-	return 0;
+	c_api = api;
 }
 
 
@@ -753,4 +722,4 @@ int Init_GDS_Routines()
 }
 #endif
 
-#endif /* _PYGDS_C_FILE_ */
+#endif /* _JUGDS_C_FILE_ */

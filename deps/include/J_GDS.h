@@ -30,11 +30,10 @@
 #       include <CoreArray.h>
         using namespace CoreArray;
 #   endif
-
-#include <julia.h>
-
-
+#   include <julia.h>
 extern "C" {
+#else
+#   include <julia.h>
 #endif
 
 	// ==================================================================
@@ -324,13 +323,10 @@ extern "C" {
 
 	// ==================================================================
 
-	/// export jugds C API pointer
-	extern void *PyGDS_API;
-
 	#ifndef COREARRAY_JULIA_PACKAGE
 
-	/// initialize GDS interface, return -1 if fails
-	extern int Init_GDS_Routines();
+	/// initialize GDS interface
+	extern void Init_GDS_Routines(void *api);
 
 	#endif  // COREARRAY_JULIA_PACKAGE
 

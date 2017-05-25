@@ -20,13 +20,13 @@
 
 module jugds
 
-import	Base: ifelse, joinpath, isfile, show, print, println, utf8
+import Base: joinpath, show, print_with_color, println
 
-export	type_gdsfile, type_gdsnode, gds_get_include,
-		create_gds, open_gds, close_gds, sync_gds, cleanup_gds,
-		root_gdsn, name_gdsn, rename_gdsn, ls_gdsn, index_gdsn, getfolder_gdsn,
-		delete_gdsn, objdesp_gdsn, read_gdsn,
-		put_attr_gdsn, get_attr_gdsn, delete_attr_gdsn
+export type_gdsfile, type_gdsnode, gds_get_include,
+	create_gds, open_gds, close_gds, sync_gds, cleanup_gds,
+	root_gdsn, name_gdsn, rename_gdsn, ls_gdsn, index_gdsn, getfolder_gdsn,
+	delete_gdsn, objdesp_gdsn, read_gdsn,
+	put_attr_gdsn, get_attr_gdsn, delete_attr_gdsn
 
 
 
