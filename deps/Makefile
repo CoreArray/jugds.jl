@@ -58,7 +58,7 @@ LDLIBS   += $(shell $(JL_SHARE)/julia-config.jl --ldlibs)
 
 
 ## Define lib macro and include
-LIBMACRO = -DCOREARRAY_USE_ZLIB_EXT -DCOREARRAY_USE_LZMA_EXT -DCOREARRAY_NO_LZ4
+LIBMACRO = -DCOREARRAY_USE_ZLIB_EXT -DCOREARRAY_NO_LZ4
 LIBINCLUDE = -Iinclude
 CFLAGS   += $(LIBMACRO) $(LIBINCLUDE)
 CXXFLAGS += $(LIBMACRO) $(LIBINCLUDE)
@@ -72,15 +72,17 @@ LIB_COREOBJS = CoreArray.o dAllocator.o dAny.o dBase.o dBitGDS.o \
 	dEndian.o dFile.o dParallel.o dParallel_Ext.o dPlatform.o dSerial.o \
 	dStream.o dStruct.o dVLIntGDS.o
 
+## Lib
+LIBXZ = liblzma.a
 
 ## Julia interface
 LIB_J_OBJS = jugds.o JCoreArray.o
 
 
 ## all jobs
-all: $(LIB_COREOBJS) $(LIB_J_OBJS)
+all: $(LIB_COREOBJS) $(LIB_J_OBJS) $(LIBXZ)
 	$(CXX) $(CXXFLAGS) -shared \
-		$(LIB_COREOBJS) $(LIB_J_OBJS) \
+		$(LIB_COREOBJS) $(LIB_J_OBJS) $(LIBXZ) \
 		$(LDFLAGS) $(LINKLIBS) $(LDLIBS) -o libCoreArray.$(LIBEXT)
 
 

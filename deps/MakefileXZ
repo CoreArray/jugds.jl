@@ -1,0 +1,21 @@
+## Remove directory entries
+RM = rm -rf
+
+## Lib
+LIBXZ = liblzma.a
+
+$(LIBXZ):
+	cd XZ && tar -xzf xz-5.2.3.tar.gz
+	cd XZ/xz-5.2.3 && ./configure --with-pic --enable-silent-rules --quiet > /dev/null
+	cd XZ/xz-5.2.3/src/liblzma && make
+	cp XZ/xz-5.2.3/src/liblzma/.libs/liblzma.a  .
+
+
+## all jobs
+all: $(LIBXZ)
+
+
+## Clean and remove files
+clean:
+	$(RM) $(LIBXZ)
+	$(RM) XZ/xz-5.2.3/
