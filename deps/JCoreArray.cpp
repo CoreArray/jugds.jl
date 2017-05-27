@@ -735,11 +735,6 @@ COREARRAY_DLL_EXPORT int GDS_Mach_Finite(double val)
 
 
 // ===========================================================================
-// R/Python objects
-
-
-
-// ===========================================================================
 // Initialization
 
 typedef void (*TFUNC)();
@@ -846,5 +841,16 @@ COREARRAY_DLL_EXPORT TFUNC GDS_C_API[] = {
 	(TFUNC)GDS_ArrayRead_BalanceBuffer);
 */
 
+// ----------------------------------------------------------------------------
+// Register routines
+// ----------------------------------------------------------------------------
+
+/// Initialize
+JL_DLLEXPORT void* GDS_Init()
+{
+	// to register CoreArray classes and objects
+	RegisterClass();
+	return (void*)GDS_C_API;
+}
 
 }

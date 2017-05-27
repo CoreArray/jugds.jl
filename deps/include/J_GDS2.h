@@ -43,6 +43,10 @@ static TFUNC *c_api = NULL;
 #define IDX_JL    0
 // (TFUNC)GDS_ID2File
 // (TFUNC)GDS_ID2FileRoot
+// (TFUNC)GDS_Is_RLogical
+// (TFUNC)GDS_Is_RFactor
+// (TFUNC)GDS_JArray_Read
+
 
 typedef PdGDSFile (*Type_ID2File)(int);
 COREARRAY_DLL_LOCAL PdGDSFile GDS_ID2File(int file_id)

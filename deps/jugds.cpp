@@ -806,20 +806,4 @@ JL_DLLEXPORT jl_value_t* gdsnGetAttrIdx(int node_id, PdGDSObj Obj, int idx)
 	return rv_ans;
 }
 
-
-
-// ----------------------------------------------------------------------------
-// Register routines
-// ----------------------------------------------------------------------------
-
-extern void *GDS_C_API;
-
-/// Initialize
-JL_DLLEXPORT void* GDS_Init()
-{
-	// to register CoreArray classes and objects
-	RegisterClass();
-	return GDS_C_API;
-}
-
 }
