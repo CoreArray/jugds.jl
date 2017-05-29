@@ -83,3 +83,8 @@ File: jugds/demo/data/ceu_exon.gds (32.5K)
 \--+ sample.annotation   [  ]
    \--+ family   { Str8 90 LZMA_ra(57.1%), 222B }
 ```
+
+
+## Also See
+
+[JSeqArray.jl](https://github.com/CoreArray/JSeqArray.jl): data manipulation of whole-genome sequencing variants in Julia
