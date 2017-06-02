@@ -26,7 +26,7 @@ CXXFLAGS = -O2
 
 ## Options for linker
 LDFLAGS =
-LDLIBS = -lz -llzma
+LDLIBS = -lz
 
 
 ## Remove directory entries
