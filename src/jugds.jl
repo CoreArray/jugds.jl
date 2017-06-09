@@ -21,6 +21,7 @@
 module jugds
 
 import Base: joinpath, show, print_with_color, println
+import DataStructures: OrderedDict
 
 export anygdsfile, type_gdsfile, type_gdsnode,
 	gds_get_include,
@@ -89,6 +90,7 @@ type type_gdsnode
 	id::Int32         # internal index
 	ptr::Ptr{Void}    # internal validation pointer
 end
+
 
 # GDS variable information
 immutable type_infogdsn
@@ -217,7 +219,8 @@ end
 
 
 # Get a specified GDS node with path
-function index_gdsn(obj::Union{type_gdsfile, type_gdsnode}, path::String, silent::Bool=false)
+function index_gdsn(obj::Union{type_gdsfile, type_gdsnode}, path::String,
+		silent::Bool=false)
 	if isa(obj, type_gdsfile)
 		obj = root_gdsn(obj)
 	end
@@ -288,7 +291,7 @@ function get_attr_gdsn(obj::type_gdsnode)
 	s = ccall((:gdsnGetAttrName, LibCoreArray), Ptr{Void}, (Cint, Ptr{Void}),
 		obj.id, obj.ptr)
 	nm = unsafe_pointer_to_objref(s)
-	dict = Dict{String, Any}()
+	dict = OrderedDict{String, Any}()
 	for i = 1:length(nm)
 		p = ccall((:gdsnGetAttrIdx, LibCoreArray), Ptr{Void}, (Cint, Ptr{Void}, Cint),
 			obj.id, obj.ptr, i)
@@ -393,12 +396,19 @@ function enum_node(io::IO, obj::type_gdsnode, prefix::String,
 	at = get_attr_gdsn(obj)
 	if length(at) > 0
 		s = s * " *"
-		if attr
-			s = s * "< " # + str(at)
-		end
 	end
 
-	println(s)
+	print(io, s)
+	if attr & length(at) > 0
+		print(io, "< ")
+		for i in 1:length(at)
+			print(io, at.keys[1], ": ", at.vals[1])
+			if i < length(at)
+				print(io, "; ")
+			end
+		end
+	end
+	println(io)
 
 	if expand && d.gds_type=="Folder"
 		nm = ls_gdsn(obj, all)
@@ -434,17 +444,17 @@ function enum_node(io::IO, obj::type_gdsnode, prefix::String,
 end
 
 
-function show(io::IO, file::type_gdsfile, attr=false, all=false)
+function show(io::IO, file::type_gdsfile; attr=false, all=false)
 	size = ccall((:gdsFileSize, LibCoreArray), Clonglong, (Cint,), file.id)
 	print_with_color(:bold, io, "File:")
 	print_with_color(:black, io, " ", file.filename)
 	print_with_color(:white, io, " (", size_fmt(size), ")")
 	println(io)
-	show(io, root_gdsn(file), attr, all)
+	show(io, root_gdsn(file), attr=attr, all=all)
 end
 
 
-function show(io::IO, obj::type_gdsnode, attr=false, all=false, expand=true)
+function show(io::IO, obj::type_gdsnode; attr=false, all=false, expand=true)
 	print_with_color(:bold, io, "")
 	enum_node(io, obj, "", true, false, all, attr, expand)
 end
