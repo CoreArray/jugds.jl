@@ -189,15 +189,21 @@ COREARRAY_DLL_EXPORT jl_array_t* GDS_JArray_Read(PdAbstractArray Obj,
 	try
 	{
 		bool bool_flag = GDS_Is_RLogical(Obj);
+		bool bool_factor = false;
 		jl_datatype_t *dat_type = NULL;
 
-		if (SV==svCustom && bool_flag)
+		if (SV==svCustom)
 		{
-			SV = svInt8;
-			dat_type = jl_bool_type;
-		} else {
-			if (SV == svCustom)
+			if (bool_flag)
 			{
+				SV = svInt8;
+				dat_type = jl_bool_type;
+			} else if (GDS_Is_RFactor(Obj))
+			{
+				SV = svInt32;
+				dat_type = jl_string_type;
+				bool_factor = true;
+			} else {
 				SV = Obj->SVType();
 				if (SV == svCustomInt)
 					SV = svInt64;
@@ -207,7 +213,10 @@ COREARRAY_DLL_EXPORT jl_array_t* GDS_JArray_Read(PdAbstractArray Obj,
 					SV = svFloat64;
 				else if (SV == svCustomStr)
 					SV = svStrUTF8;
+				if ((0 <= SV) && (SV < sizeof(sv2dt)/sizeof(jl_datatype_t*)))
+					dat_type = sv2dt[SV];
 			}
+		} else {
 			if ((0 <= SV) && (SV < sizeof(sv2dt)/sizeof(jl_datatype_t*)))
 				dat_type = sv2dt[SV];
 		}
@@ -234,7 +243,7 @@ COREARRAY_DLL_EXPORT jl_array_t* GDS_JArray_Read(PdAbstractArray Obj,
 		C_Int32 dims[ndim];
 		for (int i=0; i < ndim; i++) dims[ndim-i-1] = ValidCnt[i];
 
-		// create an array object
+		// create an array object, TODO
 		jl_value_t *atype = jl_apply_array_type(dat_type, ndim);
 		jl_array_t *rv_ans;
 		switch (ndim)
@@ -255,7 +264,65 @@ COREARRAY_DLL_EXPORT jl_array_t* GDS_JArray_Read(PdAbstractArray Obj,
 		JL_GC_PUSH1(&rv_ans);
 
 		// read
-		if (COREARRAY_SV_NUMERIC(SV))
+		if (bool_factor)
+		{
+			// it is an R factor
+			int nlevels = 0;
+			CdAny &attr = Obj->Attribute()[ASC16("R.levels")];
+			if (attr.IsString())
+				nlevels = 1;
+			else if (attr.IsArray())
+				nlevels = attr.GetArrayLength();
+
+			// save factor strings
+			jl_value_t *aty = jl_apply_array_type(dat_type, 1);
+			jl_array_t *Levels = jl_alloc_array_1d(aty, nlevels+1);
+			JL_GC_PUSH1(&Levels);
+			void **pLevel = (void**)jl_array_data(Levels);
+			{
+				jl_value_t *s = jl_cstr_to_string("");
+				pLevel[0] = s;
+				jl_gc_wb(Levels, s);
+			}
+			if (attr.IsString())
+			{
+				const UTF8String &ss = attr.GetStr8();
+				jl_value_t *s = jl_pchar_to_string(ss.c_str(), ss.size());
+				pLevel[1] = s;
+				jl_gc_wb(Levels, s);
+			} else if (attr.IsArray())
+			{
+				CdAny *p = attr.GetArray();
+				for (int i=0; i < nlevels; i++, p++)
+				{
+					const UTF8String &ss = p->GetStr8();
+					jl_value_t *s = jl_pchar_to_string(ss.c_str(), ss.size());
+					pLevel[i+1] = s;
+					jl_gc_wb(Levels, s);
+				}
+			}
+
+			// load integers
+			const size_t n = jl_array_len(rv_ans);
+			vector<C_Int32> intbuf(n);
+			if (!Selection)
+				Obj->ReadData(Start, Length, &intbuf[0], svInt32);
+			else
+				Obj->ReadDataEx(Start, Length, Selection, &intbuf[0], svInt32);
+
+			// match factor strings
+			void **p = (void**)jl_array_data(rv_ans);
+			for (size_t i=0; i < n; i++)
+			{
+				int v = intbuf[i];
+				if ((v < 1) || (v > nlevels)) v = 0;
+				jl_value_t *s = (jl_value_t*)pLevel[v];
+				*p++ = s;
+				jl_gc_wb(rv_ans, s);
+			}
+			JL_GC_POP();
+			
+		} else if (COREARRAY_SV_NUMERIC(SV))
 		{
 			void *datptr = jl_array_data(rv_ans);
 			if (!Selection)
