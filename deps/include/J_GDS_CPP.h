@@ -56,12 +56,24 @@ namespace CoreArray
 		} \
 		catch (...) { \
 			GDS_SetError("unknown error!"); cmd; \
-		} \
+		}
 
 	/// catch block for CoreArray library
 	#define COREARRAY_CATCH    \
 		CORE_CATCH(has_error = true); \
+		if (has_error) jl_error(GDS_GetError());
+
+	/// catch block for CoreArray library
+	#define COREARRAY_CATCH_RETNULL    \
+		CORE_CATCH(has_error = true); \
 		if (has_error) jl_error(GDS_GetError()); \
+		return NULL;
+
+	/// catch block for CoreArray library
+	#define COREARRAY_CATCH_RET    \
+		CORE_CATCH(has_error = true); \
+		if (has_error) jl_error(GDS_GetError()); \
+		return -1;
 
 
 
