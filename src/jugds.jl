@@ -20,10 +20,11 @@
 
 module jugds
 
-import Base: joinpath, show, print_with_color, println
+import Base: joinpath, show, printstyled, println
+import Printf: @sprintf
 import DataStructures: OrderedDict
 
-export anygdsfile, type_gdsfile, type_gdsnode,
+export type_gdsfile, type_gdsnode,
 	gds_get_include,
 	create_gds, open_gds, close_gds, sync_gds, cleanup_gds,
 	root_gdsn, name_gdsn, rename_gdsn, ls_gdsn, index_gdsn, getfolder_gdsn,
@@ -34,17 +35,17 @@ export anygdsfile, type_gdsfile, type_gdsnode,
 
 ####  Open and initialize the CoreArray binary library  ####
 
-@static if is_apple()
+@static if Sys.isapple()
 	libfn = "libCoreArray.dylib"
-elseif is_windows()
+elseif Sys.iswindows()
 	libfn = "libCoreArray.dll"
-elseif is_unix()
+elseif Sys.isunix()
 	libfn = "libCoreArray.so"
 else
 	error("The platform is not supported.")
 end
 
-global libname = joinpath(Pkg.dir(), "jugds", "deps", libfn)
+global libname = abspath(dirname(@__FILE__), "..", "deps", libfn)
 
 if !isfile(libname)
 	error("The CoreArray library cannot be found, please try Pkg.build(\"jugds\").")
@@ -56,7 +57,7 @@ global lib_c_api = C_NULL
 
 # package initialization
 function __init__()
-	global lib_c_api = ccall((:GDS_Init, LibCoreArray), Ptr{Void}, ())
+	global lib_c_api = ccall((:GDS_Init, LibCoreArray), Ptr{Cvoid}, ())
 end
 
 
@@ -78,22 +79,20 @@ end
 
 ####  Type of GDS File and Node	 ####
 
-abstract anygdsfile
-
-type type_gdsfile <: anygdsfile
+struct type_gdsfile
 	filename::String  # file name
 	id::Int32         # internal file index
 	readonly::Bool    # read-only
 end
 
-type type_gdsnode
+struct type_gdsnode
 	id::Int32         # internal index
-	ptr::Ptr{Void}    # internal validation pointer
+	ptr::Ptr{Cvoid}    # internal validation pointer
 end
 
 
 # GDS variable information
-immutable type_infogdsn
+struct type_infogdsn
 	name::String
 	fullname::String
 	storage::String
@@ -173,7 +172,7 @@ Close a CoreArray Genomic Data Structure (GDS) file.
 * `file::type_gdsfile`: an instance of `type_gdsfile`
 """
 function close_gds(file::type_gdsfile)
-	ccall((:gdsCloseGDS, LibCoreArray), Void, (Cint,), file.id)
+	ccall((:gdsCloseGDS, LibCoreArray), Cvoid, (Cint,), file.id)
 	file.filename = ""
 	file.id = -1
 	file.readonly = true
@@ -183,7 +182,7 @@ end
 
 # Synchronize the GDS file
 function sync_gds(file::type_gdsfile)
-	ccall((:gdsSyncGDS, LibCoreArray), Void, (Cint,), file.id)
+	ccall((:gdsSyncGDS, LibCoreArray), Cvoid, (Cint,), file.id)
 	return nothing
 end
 
@@ -201,8 +200,8 @@ end
 
 # Get the root of GDS file
 function root_gdsn(file::type_gdsfile)
-	p = Ref{Ptr{Void}}(C_NULL)
-	id = ccall((:gdsRoot, LibCoreArray), Cint, (Cint, Ref{Ptr{Void}}),
+	p = Ref{Ptr{Cvoid}}(C_NULL)
+	id = ccall((:gdsRoot, LibCoreArray), Cint, (Cint, Ref{Ptr{Cvoid}}),
 		file.id, p)
 	return type_gdsnode(id, p[])
 end
@@ -214,7 +213,7 @@ function ls_gdsn(obj::Union{type_gdsfile, type_gdsnode}, inc_hidden::Bool=false)
 		obj = root_gdsn(obj)
 	end
 	return ccall((:gdsnListName, LibCoreArray), Vector{String},
-		(Cint, Ptr{Void}, Bool), obj.id, obj.ptr, inc_hidden)
+		(Cint, Ptr{Cvoid}, Bool), obj.id, obj.ptr, inc_hidden)
 end
 
 
@@ -224,9 +223,9 @@ function index_gdsn(obj::Union{type_gdsfile, type_gdsnode}, path::String,
 	if isa(obj, type_gdsfile)
 		obj = root_gdsn(obj)
 	end
-	p = Ref{Ptr{Void}}(C_NULL)
+	p = Ref{Ptr{Cvoid}}(C_NULL)
 	id = ccall((:gdsnIndex, LibCoreArray), Cint,
-		(Cint, Ptr{Void}, Cstring, Bool, Ref{Ptr{Void}}),
+		(Cint, Ptr{Cvoid}, Cstring, Bool, Ref{Ptr{Cvoid}}),
 		obj.id, obj.ptr, path, silent, p)
 	if p[] != C_NULL
 		return type_gdsnode(id, p[])
@@ -238,7 +237,7 @@ end
 
 # Get the name of GDS node
 function name_gdsn(obj::type_gdsnode, full::Bool=false)
-	s = ccall((:gdsnName, LibCoreArray), Ptr{Void}, (Cint, Ptr{Void}, Bool),
+	s = ccall((:gdsnName, LibCoreArray), Ptr{Cvoid}, (Cint, Ptr{Cvoid}, Bool),
 		obj.id, obj.ptr, full)
 	return unsafe_pointer_to_objref(s)
 end
@@ -246,8 +245,8 @@ end
 
 # Rename the GDS node
 function rename_gdsn(obj::type_gdsnode, newname::String)
-	ccall((:gdsnRename, LibCoreArray), Void,
-		(Cint, Ptr{Void}, Cstring), obj.id, obj.ptr, newname)
+	ccall((:gdsnRename, LibCoreArray), Cvoid,
+		(Cint, Ptr{Cvoid}, Cstring), obj.id, obj.ptr, newname)
 	return obj
 end
 
@@ -260,7 +259,7 @@ function objdesp_gdsn(obj::type_gdsnode)
 	good = Ref{Bool}(false)
 	hidden = Ref{Bool}(false)
 	s = ccall((:gdsnDesp, LibCoreArray), Vector{String},
-		(Cint, Ptr{Void}, Vector{Int64}, Ref{Float64}, Ref{Int64}, Ref{Bool}, Ref{Bool}),
+		(Cint, Ptr{Cvoid}, Vector{Int64}, Ref{Float64}, Ref{Int64}, Ref{Bool}, Ref{Bool}),
 		obj.id, obj.ptr, dm, cratio, size, good, hidden)
 	return type_infogdsn(s[1], s[2], s[3], s[4], s[5],
 		dm, s[6], s[7], cratio[], size[], good[], hidden[], s[8])
@@ -270,8 +269,8 @@ end
 # Get the descritpion of a specified node
 function read_gdsn(obj::type_gdsnode, start::Vector{Int64}=Vector{Int64}(),
 		count::Vector{Int64}=Vector{Int64}(), cvt::String="")
-	p = ccall((:gdsnRead, LibCoreArray), Ptr{Void},
-		(Cint, Ptr{Void}, Vector{Int64}, Vector{Int64}, Cstring),
+	p = ccall((:gdsnRead, LibCoreArray), Ptr{Cvoid},
+		(Cint, Ptr{Cvoid}, Vector{Int64}, Vector{Int64}, Cstring),
 		obj.id, obj.ptr, start, count, cvt)
 	return unsafe_pointer_to_objref(p)
 end
@@ -288,12 +287,12 @@ end
 
 # Get the attributes of a GDS node
 function get_attr_gdsn(obj::type_gdsnode)
-	s = ccall((:gdsnGetAttrName, LibCoreArray), Ptr{Void}, (Cint, Ptr{Void}),
+	s = ccall((:gdsnGetAttrName, LibCoreArray), Ptr{Cvoid}, (Cint, Ptr{Cvoid}),
 		obj.id, obj.ptr)
 	nm = unsafe_pointer_to_objref(s)
 	dict = OrderedDict{String, Any}()
 	for i = 1:length(nm)
-		p = ccall((:gdsnGetAttrIdx, LibCoreArray), Ptr{Void}, (Cint, Ptr{Void}, Cint),
+		p = ccall((:gdsnGetAttrIdx, LibCoreArray), Ptr{Cvoid}, (Cint, Ptr{Cvoid}, Cint),
 			obj.id, obj.ptr, i)
 		dict[nm[i]] = unsafe_pointer_to_objref(p)
 	end
@@ -302,8 +301,8 @@ end
 
 # Remove an attribute from a GDS node
 function delete_attr_gdsn(obj::type_gdsnode, name::String)
-	ccall((:GDS_DeleteAttr, LibCoreArray), Void,
-		(Cint, Ptr{Void}, Cstring), obj.id, obj.ptr, name)
+	ccall((:GDS_DeleteAttr, LibCoreArray), Cvoid,
+		(Cint, Ptr{Cvoid}, Cstring), obj.id, obj.ptr, name)
 	error_check()
 	return nothing
 end
@@ -446,16 +445,16 @@ end
 
 function show(io::IO, file::type_gdsfile; attr=false, all=false)
 	size = ccall((:gdsFileSize, LibCoreArray), Clonglong, (Cint,), file.id)
-	print_with_color(:bold, io, "File:")
-	print_with_color(:black, io, " ", file.filename)
-	print_with_color(:white, io, " (", size_fmt(size), ")")
+	printstyled(io, "File:", color=:bold)
+	printstyled(io, " ", file.filename, color=:black)
+	printstyled(io, " (", size_fmt(size), ")", color=:white)
 	println(io)
 	show(io, root_gdsn(file), attr=attr, all=all)
 end
 
 
 function show(io::IO, obj::type_gdsnode; attr=false, all=false, expand=true)
-	print_with_color(:bold, io, "")
+	printstyled(io, "", color=:bold)
 	enum_node(io, obj, "", true, false, all, attr, expand)
 end
 

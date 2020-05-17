@@ -1,0 +1,4 @@
+name = "jugds"
+uuid = "6a2db74c-42a8-4442-9336-9d82e1af24c3"
+authors = ["Xiuwen Zheng <zhengxwen@gmail.com>"]
+version = "0.1.0"

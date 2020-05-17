@@ -420,8 +420,8 @@ JL_DLLEXPORT jl_array_t* gdsnListName(int node_id, PdGDSObj node,
 				}
 			}
 
-			jl_value_t *array_type = jl_apply_array_type(jl_string_type, 1);
-			rv_ans = jl_alloc_array_1d(array_type, List.size());
+			jl_value_t *atype = jl_apply_array_type((jl_value_t*)jl_string_type, 1);
+			rv_ans = jl_alloc_array_1d(atype, List.size());
 			void **data = (void**)jl_array_data(rv_ans);
 			for (size_t i=0; i < List.size(); i++)
 			{
@@ -602,7 +602,8 @@ JL_DLLEXPORT jl_array_t* gdsnDesp(int node_id, PdGDSObj node,
 			msg = v->ErrMsg().c_str();
 		}
 
-		rv_ans = jl_alloc_array_1d(jl_apply_array_type(jl_string_type, 1), 8);
+		jl_value_t *atype = jl_apply_array_type((jl_value_t*)jl_string_type, 1);
+		rv_ans = jl_alloc_array_1d(atype, 8);
 		jl_value_t *s;
 		void **p = (void**)jl_array_data(rv_ans);
 		p[0] = s = jl_pchar_to_string(nm.c_str(), nm.size());
@@ -742,7 +743,7 @@ JL_DLLEXPORT jl_array_t* gdsnGetAttrName(int node_id, PdGDSObj node)
 	COREARRAY_TRY
 		CdGDSObj *Obj = get_obj(node_id, node);
 		const size_t n = Obj->Attribute().Count();
-		jl_value_t *atype = jl_apply_array_type(jl_string_type, 1);
+		jl_value_t *atype = jl_apply_array_type((jl_value_t*)jl_string_type, 1);
 		rv_ans = jl_alloc_array_1d(atype, n);
 		void **p = (void**)jl_array_data(rv_ans);
 		for (size_t i=0; i < n; i++)
@@ -776,7 +777,7 @@ JL_DLLEXPORT jl_value_t* any2obj(CdAny &Obj)
 	{
 		const size_t n = Obj.GetArrayLength();
 		CdAny *p = Obj.GetArray();
-		jl_value_t *atype = jl_apply_array_type(jl_any_type, 1);
+		jl_value_t *atype = jl_apply_array_type((jl_value_t*)jl_any_type, 1);
 		jl_array_t *rv_ans = jl_alloc_array_1d(atype, n);
 		JL_GC_PUSH1(&rv_ans);
 		void **data = (void**)jl_array_data(rv_ans);

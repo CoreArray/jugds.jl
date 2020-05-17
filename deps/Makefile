@@ -48,13 +48,10 @@ endif
 
 
 ## julia program
-JL_SHARE = $(shell julia -e 'print(joinpath(JULIA_HOME,Base.DATAROOTDIR,"julia"))')
-CFLAGS   += $(shell $(JL_SHARE)/julia-config.jl --cflags)
-CXXFLAGS += $(shell $(JL_SHARE)/julia-config.jl --cflags)
-
-
-LDFLAGS  += $(shell $(JL_SHARE)/julia-config.jl --ldflags)
-LDLIBS   += $(shell $(JL_SHARE)/julia-config.jl --ldlibs)
+CFLAGS   += $(JL_CFLAGS)
+CXXFLAGS += $(JL_CXXFLAGS)
+LDFLAGS  += $(JL_LDFLAGS)
+LDLIBS   += $(JL_LDLIBS)
 
 
 ## Define lib macro and include
@@ -99,6 +96,8 @@ clean:
 ##  Julia Interface  ##
 
 jugds.o: jugds.cpp
+	echo "$(CXXFLAGS)"
+	echo "$(JL_SHARE)"
 	$(CXX) $(CXXFLAGS) -ICoreArray jugds.cpp -c -o $@
 
 JCoreArray.o: JCoreArray.cpp

@@ -244,7 +244,7 @@ COREARRAY_DLL_EXPORT jl_array_t* GDS_JArray_Read(PdAbstractArray Obj,
 		for (int i=0; i < ndim; i++) dims[ndim-i-1] = ValidCnt[i];
 
 		// create an array object, TODO
-		jl_value_t *atype = jl_apply_array_type(dat_type, ndim);
+		jl_value_t *atype = jl_apply_array_type((jl_value_t*)dat_type, ndim);
 		jl_array_t *rv_ans;
 		switch (ndim)
 		{
@@ -275,7 +275,7 @@ COREARRAY_DLL_EXPORT jl_array_t* GDS_JArray_Read(PdAbstractArray Obj,
 				nlevels = attr.GetArrayLength();
 
 			// save factor strings
-			jl_value_t *aty = jl_apply_array_type(dat_type, 1);
+			jl_value_t *aty = jl_apply_array_type((jl_value_t*)dat_type, 1);
 			jl_array_t *Levels = jl_alloc_array_1d(aty, nlevels+1);
 			JL_GC_PUSH1(&Levels);
 			void **pLevel = (void**)jl_array_data(Levels);
