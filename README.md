@@ -18,7 +18,7 @@ This package provides a high-level Julia interface to CoreArray Genomic Data Str
 
 * Development version from Github, requiring `julia >= v1.0`
 ```julia
-import Pkg
+using Pkg
 
 Pkg.status()
 Pkg.add(PackageSpec(url="https://github.com/CoreArray/jugds.jl.git"))
