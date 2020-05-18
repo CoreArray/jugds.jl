@@ -2,7 +2,7 @@
 #
 # jugds.jl: Julia Interface to CoreArray Genomic Data Structure (GDS) Files
 #
-# Copyright (C) 2015-2017    Xiuwen Zheng
+# Copyright (C) 2015-2020    Xiuwen Zheng
 #
 # This is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License Version 3 as
@@ -45,7 +45,7 @@ else
 	error("The platform is not supported.")
 end
 
-global libname = abspath(dirname(@__FILE__), "..", "deps", libfn)
+global libname = abspath(@__DIR__, "..", "deps", libfn)
 
 if !isfile(libname)
 	error("The CoreArray library cannot be found, please try Pkg.build(\"jugds\").")
@@ -446,9 +446,8 @@ end
 function show(io::IO, file::type_gdsfile; attr=false, all=false)
 	size = ccall((:gdsFileSize, LibCoreArray), Clonglong, (Cint,), file.id)
 	printstyled(io, "File:", color=:bold)
-	printstyled(io, " ", file.filename, color=:black)
-	printstyled(io, " (", size_fmt(size), ")", color=:white)
-	println(io)
+	printstyled(io, " ", file.filename, color=:bold)
+	println(io, " (", size_fmt(size), ")")
 	show(io, root_gdsn(file), attr=attr, all=all)
 end
 

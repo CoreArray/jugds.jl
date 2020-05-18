@@ -2,7 +2,7 @@ jugds: Julia Interface to CoreArray Genomic Data Structure (GDS) Files
 ===
 
 ![GPLv3](http://www.gnu.org/graphics/gplv3-88x31.png)
-[GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html) (2015-2017)
+[GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html) (2015-2020)
 
 [![Build Status](https://travis-ci.org/CoreArray/jugds.jl.png)](https://travis-ci.org/CoreArray/jugds.jl)
 
@@ -16,11 +16,12 @@ This package provides a high-level Julia interface to CoreArray Genomic Data Str
 
 ## Installation
 
-* Development version from Github, requiring `julia >= v0.5`
+* Development version from Github, requiring `julia >= v1.0`
 ```julia
+import Pkg
+
 Pkg.status()
-Pkg.clone("https://github.com/CoreArray/jugds.jl.git")
-Pkg.build("jugds")
+Pkg.add(PackageSpec(url="https://github.com/CoreArray/jugds.jl.git"))
 ```
 
 
@@ -53,7 +54,7 @@ Zheng X, Gogarten S, Lawrence M, Stilp A, Conomos M, Weir BS, Laurie C, Levine D
 ```julia
 using jugds
 
-fn = joinpath(Pkg.dir(), "jugds", "demo", "data", "ceu_exon.gds")
+fn = abspath(dirname(pathof(jugds)), "..", "demo", "data", "ceu_exon.gds")
 f = open_gds(fn)
 f
 close_gds(f)
