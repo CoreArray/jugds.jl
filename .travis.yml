@@ -4,5 +4,5 @@ env:
   - CC=clang CXX=clang
 
 julia:
-  - release
+  - 1.4.1
 
