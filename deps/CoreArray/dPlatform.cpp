@@ -8,7 +8,7 @@
 //
 // dPlatform.cpp: Functions for independent platforms
 //
-// Copyright (C) 2007-2017    Xiuwen Zheng
+// Copyright (C) 2007-2018    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -1143,13 +1143,14 @@ TSysHandle CoreArray::SysOpenFile(char const* const AFileName,
 		return (H != INVALID_HANDLE_VALUE) ? H : NULL;
 	#else
 		TSysHandle H;
+		int flag = 0;
 		#ifdef O_LARGEFILE
-			int flag = O_LARGEFILE;
-		#else
-			int flag = 0;
+			flag |= O_LARGEFILE;
 		#endif
-		H = open(AFileName, flag | AccessMode[mode] |
-			ShareMode[smode]);
+		#ifdef O_CLOEXEC
+			flag |= O_CLOEXEC;
+		#endif
+		H = open(AFileName, flag | AccessMode[mode] | ShareMode[smode]);
 		return (H > 0) ? H : 0;
 	#endif
 }
@@ -1569,15 +1570,9 @@ CdThreadMutex::CdThreadMutex()
 CdThreadMutex::~CdThreadMutex()
 {
 #if defined(COREARRAY_POSIX_THREAD)
-
-	int v = pthread_mutex_destroy(&mutex);
-	if (v != 0)
-		throw ErrOSError(ERR_PTHREAD, "pthread_mutex_destroy", v);
-
+	pthread_mutex_destroy(&mutex);
 #elif defined(COREARRAY_PLATFORM_WINDOWS)
-
 	DeleteCriticalSection(&mutex);
-
 #endif
 }
 
@@ -1874,7 +1869,7 @@ CdThread::CdThread(TdThreadProc proc, void *Data)
 	_BeginThread();
 }
 
-CdThread::~CdThread()
+CdThread::~CdThread() COREARRAY_NOEXCEPT_FALSE
 {
 	try {
 		Terminate();

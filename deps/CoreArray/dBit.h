@@ -8,7 +8,7 @@
 //
 // dBit.h: Integers with specific numbers of bits and bitwise operation
 //
-// Copyright (C) 2007-2017    Xiuwen Zheng
+// Copyright (C) 2007-2018    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -27,9 +27,9 @@
 
 /**
  *	\file     dBit.h
- *	\author   Xiuwen Zheng [zhengx@u.washington.edu]
+ *	\author   Xiuwen Zheng [zhengxwen@gmail.com]
  *	\version  1.0
- *	\date     2007 - 2017
+ *	\date     2007 - 2018
  *	\brief    Integers with specific number of bits and bitwise operation
  *	\details
 **/
@@ -291,10 +291,10 @@ namespace CoreArray
 
 	// Bit Type Traits
 
-	// "dBit1" ... "dBit32"
+	// "dBit0", "dBit1" ... "dBit32"
 	extern const char *BitStreamNames[];
 
-	// "dSBit1" ... "dSBit32"
+	// "dSBit0", "dSBit1" ... "dSBit32"
 	extern const char *SBitStreamNames[];
 
 	template<unsigned bits, bool is_signed, typename int_type, C_Int64 mask>
@@ -312,10 +312,7 @@ namespace CoreArray
 
 		static const char *StreamName()
 		{
-			if (is_signed)
-				return SBitStreamNames[bits-1];
-			else
-				return BitStreamNames[bits-1];
+			return is_signed ? SBitStreamNames[bits] : BitStreamNames[bits];
 		}
 		static const char *TraitName()
 		{

@@ -8,7 +8,7 @@
 //
 // dVLIntGDS.cpp: Encoding variable-length integers in GDS
 //
-// Copyright (C) 2016-2017    Xiuwen Zheng
+// Copyright (C) 2016-2019    Xiuwen Zheng
 //
 // This file is part of CoreArray.
 //
@@ -24,6 +24,10 @@
 // You should have received a copy of the GNU Lesser General Public
 // License along with CoreArray.
 // If not, see <http://www.gnu.org/licenses/>.
+
+#ifndef COREARRAY_COMPILER_OPTIMIZE_FLAG
+#   define COREARRAY_COMPILER_OPTIMIZE_FLAG  3
+#endif
 
 #include "dVLIntGDS.h"
 #include <typeinfo>
@@ -131,12 +135,11 @@ void CdVL_Int::Loading(CdReader &Reader, TdVersion Version)
 	// load the content
 	if (fGDSStream)
 	{
+		// get the indexing stream
 		Reader[VAR_INDEX] >> fIndexingID;
 		fIndexingStream = fGDSStream->Collection()[fIndexingID];
-	}
-	// get the total size
-	if (fGDSStream)
-	{
+		// get the total size
+		fTotalStreamSize = 0;
 		if (fPipeInfo)
 		{
 			fTotalStreamSize = fPipeInfo->StreamTotalIn();
@@ -151,7 +154,7 @@ void CdVL_Int::Saving(CdWriter &Writer)
 {
 	CdArray<TVL_Int>::Saving(Writer);
 	// save data
-	if (fGDSStream != NULL)
+	if (fGDSStream)
 	{
 		if (!fIndexingStream)
 			fIndexingStream = fGDSStream->Collection().NewBlockStream();
@@ -344,7 +347,7 @@ void CdVL_UInt::Saving(CdWriter &Writer)
 {
 	CdArray<TVL_UInt>::Saving(Writer);
 	// save data
-	if (fGDSStream != NULL)
+	if (fGDSStream)
 	{
 		if (!fIndexingStream)
 			fIndexingStream = fGDSStream->Collection().NewBlockStream();
@@ -417,5 +420,27 @@ void CdVL_UInt::SetStreamPos(C_Int64 idx)
 			}
 		}
 		fCurStreamPosition = fAllocator.Position();
+	}
+}
+
+
+namespace CoreArray
+{
+	template<typename TClass> static CdObjRef *OnObjCreate()
+	{
+		return new TClass();
+	}
+
+	COREARRAY_DLL_LOCAL void RegisterClass_VLInt()
+	{
+		#define REG_CLASS(T, CLASS, CType, Desp)	\
+			dObjManager().AddClass(TdTraits< T >::StreamName(), \
+				OnObjCreate< CLASS >, CdObjClassMgr::CType, Desp)
+
+		// variable-length integers
+		REG_CLASS(TVL_Int, CdVL_Int, ctArray, "variable-length signed integer");
+		REG_CLASS(TVL_UInt, CdVL_UInt, ctArray, "variable-length unsigned integer");
+
+		#undef REG_CLASS
 	}
 }

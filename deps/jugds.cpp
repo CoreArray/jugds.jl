@@ -2,7 +2,7 @@
 //
 // jugds.cpp: Julia Interface to CoreArray Genomic Data Structure (GDS) Files
 //
-// Copyright (C) 2017    Xiuwen Zheng
+// Copyright (C) 2017-2020    Xiuwen Zheng
 //
 // jugds is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License Version 3 as
@@ -108,21 +108,36 @@ namespace jugds
 			ClassMap["sbit32"] = TdTraits< C_Int32          >::StreamName();
 			ClassMap["sbit64"] = TdTraits< C_Int64          >::StreamName();
 
+			ClassMap["sp.int"]   = TdTraits< TSpInt32 >::StreamName();
+			ClassMap["sp.int8"]  = TdTraits< TSpInt8 >::StreamName();
+			ClassMap["sp.int16"] = TdTraits< TSpInt16 >::StreamName();
+			ClassMap["sp.int32"] = TdTraits< TSpInt32 >::StreamName();
+			ClassMap["sp.int64"] = TdTraits< TSpInt64 >::StreamName();
+			ClassMap["sp.uint8"]  = TdTraits< TSpUInt8 >::StreamName();
+			ClassMap["sp.uint16"] = TdTraits< TSpUInt16 >::StreamName();
+			ClassMap["sp.uint32"] = TdTraits< TSpUInt32 >::StreamName();
+			ClassMap["sp.uint64"] = TdTraits< TSpUInt64 >::StreamName();
+
 
 			// ==============================================================
 			// Real number
-
 			ClassMap["float32"] = TdTraits< C_Float32 >::StreamName();
 			ClassMap["float64"] = TdTraits< C_Float64 >::StreamName();
-			ClassMap["packedreal8"]  = TdTraits< TREAL8  >::StreamName();
-			ClassMap["packedreal16"] = TdTraits< TREAL16 >::StreamName();
-			ClassMap["packedreal24"] = TdTraits< TREAL24 >::StreamName();
-			ClassMap["packedreal32"] = TdTraits< TREAL32 >::StreamName();
+			ClassMap["packedreal8"]   = TdTraits< TReal8  >::StreamName();
+			ClassMap["packedreal8u"]  = TdTraits< TReal8u >::StreamName();
+			ClassMap["packedreal16"]  = TdTraits< TReal16 >::StreamName();
+			ClassMap["packedreal16u"] = TdTraits< TReal16u >::StreamName();
+			ClassMap["packedreal24"]  = TdTraits< TReal24 >::StreamName();
+			ClassMap["packedreal24u"] = TdTraits< TReal24u >::StreamName();
+			ClassMap["packedreal32"]  = TdTraits< TReal32 >::StreamName();
+			ClassMap["packedreal32u"] = TdTraits< TReal32u >::StreamName();
+			ClassMap["sp.real"]    = TdTraits< TSpReal64 >::StreamName();
+			ClassMap["sp.real32"]  = TdTraits< TSpReal32 >::StreamName();
+			ClassMap["sp.real64"]  = TdTraits< TSpReal64 >::StreamName();
 
 
 			// ==============================================================
 			// String
-
 			ClassMap["string"   ] = TdTraits< VARIABLE_LEN<C_UTF8>  >::StreamName();
 			ClassMap["string16" ] = TdTraits< VARIABLE_LEN<C_UTF16> >::StreamName();
 			ClassMap["string32" ] = TdTraits< VARIABLE_LEN<C_UTF32> >::StreamName();
@@ -136,7 +151,6 @@ namespace jugds
 
 			// ==============================================================
 			// R storage mode
-
 			ClassMap["char"     ] = TdTraits< C_Int8  >::StreamName();
 			ClassMap["raw"      ] = TdTraits< C_Int8  >::StreamName();
 			ClassMap["int"      ] = TdTraits< C_Int32 >::StreamName();
@@ -144,6 +158,7 @@ namespace jugds
 			ClassMap["vl_int"   ] = TdTraits< TVL_Int >::StreamName();
 			ClassMap["vl_uint"  ] = TdTraits< TVL_UInt >::StreamName();
 			ClassMap["float"    ] = TdTraits< C_Float32 >::StreamName();
+			ClassMap["single"   ] = TdTraits< C_Float32 >::StreamName();
 			ClassMap["numeric"  ] = TdTraits< C_Float64 >::StreamName();
 			ClassMap["double"   ] = TdTraits< C_Float64 >::StreamName();
 			ClassMap["character"] = TdTraits< VARIABLE_LEN<C_UTF8> >::StreamName();
@@ -412,7 +427,7 @@ JL_DLLEXPORT jl_array_t* gdsnListName(int node_id, PdGDSObj node,
 						List.push_back(RawText(Obj->Name()));
 					} else {
 						if (!Obj->GetHidden() &&
-							!Obj->Attribute().HasName(ASC16("R.invisible")))
+							!Obj->Attribute().HasName("R.invisible"))
 						{
 							List.push_back(RawText(Obj->Name()));
 						}
@@ -448,7 +463,7 @@ JL_DLLEXPORT int gdsnIndex(int node_id, PdGDSObj node, const char *path,
 		CdGDSAbsFolder *Dir = dynamic_cast<CdGDSAbsFolder*>(Obj);
 		if (Dir)
 		{
-			Obj = Dir->PathEx(UTF16Text(path));
+			Obj = Dir->PathEx(path);
 			if (!Obj && !silent)
 				throw ErrGDSObj("No such GDS node \"%s\"!", path);
 			if (Obj)
@@ -486,7 +501,7 @@ JL_DLLEXPORT void gdsnRename(int node_id, PdGDSObj node, const char *newname)
 {
 	COREARRAY_TRY
 		CdGDSObj *Obj = get_obj(node_id, node);
-		Obj->SetName(UTF16Text(newname));
+		Obj->SetName(newname);
 	COREARRAY_CATCH
 }
 
@@ -591,7 +606,7 @@ JL_DLLEXPORT jl_array_t* gdsnDesp(int node_id, PdGDSObj node,
 
 		// hidden
 		*hidden = Obj->GetHidden() ||
-			Obj->Attribute().HasName(ASC16("R.invisible"));
+			Obj->Attribute().HasName("R.invisible");
 
 		// message
 		string msg;

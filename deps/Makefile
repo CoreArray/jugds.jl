@@ -66,8 +66,8 @@ LIB_COREARRAY_A = libCoreArray.a
 
 ## CoreArray library object files
 LIB_COREOBJS = CoreArray.o dAllocator.o dAny.o dBase.o dBitGDS.o \
-	dEndian.o dFile.o dParallel.o dParallel_Ext.o dPlatform.o dSerial.o \
-	dStream.o dStruct.o dVLIntGDS.o
+	dEndian.o dFile.o dParallel.o dParallel_Ext.o dPlatform.o dRealGDS.o \
+	dSerial.o dSparse.o dStrGDS.o dStream.o dStruct.o dVLIntGDS.o
 
 ## Lib
 LIBXZ = liblzma.a
@@ -136,8 +136,17 @@ dParallel_Ext.o:
 dPlatform.o:
 	$(CXX) $(CXXFLAGS) CoreArray/dPlatform.cpp -c -o $@
 
+dRealGDS.o:
+	$(CXX) $(CXXFLAGS) CoreArray/dRealGDS.cpp -c -o $@
+
 dSerial.o:
 	$(CXX) $(CXXFLAGS) CoreArray/dSerial.cpp -c -o $@
+
+dSparse.o:
+	$(CXX) $(CXXFLAGS) CoreArray/dSparse.cpp -c -o $@
+
+dStrGDS.o:
+	$(CXX) $(CXXFLAGS) CoreArray/dStrGDS.cpp -c -o $@
 
 dStream.o:
 	$(CXX) $(CXXFLAGS) CoreArray/dStream.cpp -c -o $@

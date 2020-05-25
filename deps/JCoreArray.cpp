@@ -2,7 +2,7 @@
 //
 // JCoreArray.cpp: Export the C routines of CoreArray library
 //
-// Copyright (C) 2015-2017    Xiuwen Zheng
+// Copyright (C) 2015-2020    Xiuwen Zheng
 //
 // jugds is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License Version 3 as
@@ -146,16 +146,16 @@ COREARRAY_DLL_EXPORT PdGDSFolder GDS_ID2FileRoot(int file_id)
 
 COREARRAY_DLL_EXPORT C_BOOL GDS_Is_RLogical(PdGDSObj Obj)
 {
-	return Obj->Attribute().HasName(ASC16("R.logical"));
+	return Obj->Attribute().HasName("R.logical");
 }
 
 
 COREARRAY_DLL_EXPORT C_BOOL GDS_Is_RFactor(PdGDSObj Obj)
 {
-	if (Obj->Attribute().HasName(ASC16("R.class")) &&
-		Obj->Attribute().HasName(ASC16("R.levels")))
+	if (Obj->Attribute().HasName("R.class") &&
+		Obj->Attribute().HasName("R.levels"))
 	{
-		return (Obj->Attribute()[ASC16("R.class")].GetStr8() == "factor");
+		return (Obj->Attribute()["R.class"].GetStr8() == "factor");
 	} else
 		return false;
 }
@@ -268,7 +268,7 @@ COREARRAY_DLL_EXPORT jl_array_t* GDS_JArray_Read(PdAbstractArray Obj,
 		{
 			// it is an R factor
 			int nlevels = 0;
-			CdAny &attr = Obj->Attribute()[ASC16("R.levels")];
+			CdAny &attr = Obj->Attribute()["R.levels"];
 			if (attr.IsString())
 				nlevels = 1;
 			else if (attr.IsArray())
@@ -570,9 +570,9 @@ COREARRAY_DLL_EXPORT PdGDSObj GDS_Node_Path(PdGDSFolder Node,
 	const char *Path, C_BOOL MustExist)
 {
 	if (MustExist)
-		return Node->Path(UTF16Text(Path));
+		return Node->Path(Path);
 	else
-		return Node->PathEx(UTF16Text(Path));
+		return Node->PathEx(Path);
 }
 
 
@@ -587,7 +587,7 @@ COREARRAY_DLL_EXPORT int GDS_Attr_Count(PdGDSObj Node)
 
 COREARRAY_DLL_EXPORT int GDS_Attr_Name2Index(PdGDSObj Node, const char *Name)
 {
-	return Node->Attribute().IndexName(ASC16(Name));
+	return Node->Attribute().IndexName(Name);
 }
 
 
