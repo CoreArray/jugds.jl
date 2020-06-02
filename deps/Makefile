@@ -26,7 +26,7 @@ CXXFLAGS = -O2
 
 ## Options for linker
 LDFLAGS =
-LDLIBS = -lz
+LDLIBS =
 
 
 ## Remove directory entries
@@ -55,7 +55,7 @@ LDLIBS   += $(JL_LDLIBS)
 
 
 ## Define lib macro and include
-LIBMACRO = -DCOREARRAY_USE_ZLIB_EXT -DCOREARRAY_NO_LZ4
+LIBMACRO =
 LIBINCLUDE = -Iinclude
 CFLAGS   += $(LIBMACRO) $(LIBINCLUDE)
 CXXFLAGS += $(LIBMACRO) $(LIBINCLUDE)
@@ -69,6 +69,13 @@ LIB_COREOBJS = CoreArray.o dAllocator.o dAny.o dBase.o dBitGDS.o \
 	dEndian.o dFile.o dParallel.o dParallel_Ext.o dPlatform.o dRealGDS.o \
 	dSerial.o dSparse.o dStrGDS.o dStream.o dStruct.o dVLIntGDS.o
 
+## zlib
+ZLIB_OBJS = adler32.o compress.o crc32.o deflate.o infback.o inffast.o \
+	inflate.o inftrees.o trees.o uncompr.o zutil.o
+
+## lz4
+LZ4_OBJS = lz4.o lz4hc.o lz4frame.o xxhash.o
+
 ## Lib
 LIBXZ = liblzma.a
 
@@ -77,9 +84,9 @@ LIB_J_OBJS = jugds.o JCoreArray.o
 
 
 ## all jobs
-all: $(LIB_COREOBJS) $(LIB_J_OBJS) $(LIBXZ)
+all: $(LIB_COREOBJS) $(ZLIB_OBJS) $(LZ4_OBJS) $(LIBXZ) $(LIB_J_OBJS)
 	$(CXX) $(CXXFLAGS) -shared \
-		$(LIB_COREOBJS) $(LIB_J_OBJS) $(LIBXZ) \
+		$(LIB_COREOBJS) $(ZLIB_OBJS) $(LZ4_OBJS) $(LIBXZ) $(LIB_J_OBJS) \
 		$(LDFLAGS) $(LINKLIBS) $(LDLIBS) -o libCoreArray.$(LIBEXT)
 
 
@@ -156,3 +163,54 @@ dStruct.o:
 
 dVLIntGDS.o:
 	$(CXX) $(CXXFLAGS) CoreArray/dVLIntGDS.cpp -c -o $@
+
+
+##  zlib  ##
+
+adler32.o:
+	$(CC) $(CFLAGS) -IZLIB ZLIB/adler32.c -c -o $@
+
+compress.o:
+	$(CC) $(CFLAGS) -IZLIB ZLIB/compress.c -c -o $@
+
+crc32.o:
+	$(CC) $(CFLAGS) -IZLIB ZLIB/crc32.c -c -o $@
+
+deflate.o:
+	$(CC) $(CFLAGS) -IZLIB ZLIB/deflate.c -c -o $@
+
+infback.o:
+	$(CC) $(CFLAGS) -IZLIB ZLIB/infback.c -c -o $@
+
+inffast.o:
+	$(CC) $(CFLAGS) -IZLIB ZLIB/inffast.c -c -o $@
+
+inflate.o:
+	$(CC) $(CFLAGS) -IZLIB ZLIB/inflate.c -c -o $@
+
+inftrees.o:
+	$(CC) $(CFLAGS) -IZLIB ZLIB/inftrees.c -c -o $@
+
+trees.o:
+	$(CC) $(CFLAGS) -IZLIB ZLIB/trees.c -c -o $@
+
+uncompr.o:
+	$(CC) $(CFLAGS) -IZLIB ZLIB/uncompr.c -c -o $@
+
+zutil.o:
+	$(CC) $(CFLAGS) -IZLIB ZLIB/zutil.c -c -o $@
+
+
+##  lz4  ##
+
+lz4.o:
+	$(CC) $(CFLAGS) -ILZ4 LZ4/lz4.c -c -o $@
+
+lz4hc.o:
+	$(CC) $(CFLAGS) -ILZ4 LZ4/lz4hc.c -c -o $@
+
+lz4frame.o:
+	$(CC) $(CFLAGS) -ILZ4 LZ4/lz4frame.c -c -o $@
+
+xxhash.o:
+	$(CC) $(CFLAGS) -ILZ4 LZ4/xxhash.c -c -o $@
